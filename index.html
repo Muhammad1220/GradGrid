@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GradGrid 2025</title>
+  <style>
+    /* -- Prevent any scrolling, ensure full-page fit -- */
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    :root {
+      --nav-height: 60px;
+      --navy:   #001f3f;
+      --duck:   #00bfa5;
+      --gray:   #e0e0e0;
+      --white:  #ffffff;
+      --orange: #ff9500;
+      --red:    #ff6b6b;
+      --green:  lightgreen;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: var(--gray);
+      color: var(--navy);
+      height: 100%;
+    }
+
+    /* Navbar */
+    .navbar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: var(--nav-height);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--navy);
+      color: var(--white);
+      padding: 0 1.5rem;
+      z-index: 10;
+    }
+    .navbar .brand {
+      color: var(--duck);
+      font-weight: bold;
+      font-size: 1.25rem;
+    }
+    .navbar .info {
+      display: flex;
+      gap: 1rem;
+      font-size: 0.95rem;
+    }
+    .navbar .info strong {
+      color: var(--duck);
+    }
+    .navbar .menu {
+      display: flex;
+      gap: 1rem;
+    }
+    .navbar a {
+      color: var(--white);
+      text-decoration: none;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .navbar a:hover {
+      color: var(--duck);
+    }
+
+    /* “How many plots?” modal */
+    .modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+    }
+    .modal-content {
+      background: var(--white);
+      padding: 2rem;
+      border-radius: 8px;
+      text-align: center;
+      min-width: 260px;
+    }
+    .modal-content h2 {
+      margin-bottom: 1rem;
+    }
+    .modal-content .options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+    .modal-content label {
+      cursor: pointer;
+      font-size: 1.1rem;
+    }
+    .modal-content input {
+      margin-right: 4px;
+      cursor: pointer;
+    }
+    .modal-content button {
+      padding: 0.5rem 1rem;
+      background: var(--duck);
+      color: var(--white);
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    /* Instruction banner */
+    .instructions {
+      position: fixed;
+      top: var(--nav-height);
+      left: 0; right: 0;
+      background: rgba(255,255,255,0.9);
+      text-align: center;
+      padding: 0.5rem;
+      font-weight: bold;
+      display: none;
+      z-index: 9;
+    }
+
+    /* Grid Canvas: fits exactly beneath navbar, no overflow */
+    .canvas-container {
+      --size: min(100vw, calc(100vh - var(--nav-height)));
+      position: absolute;
+      top: var(--nav-height);
+      left: 0; right: 0; bottom: 0;
+      width: var(--size);
+      height: var(--size);
+      margin: auto;
+      display: grid;
+      grid-template-columns: repeat(20, 1fr);
+      grid-template-rows:    repeat(30, 1fr);
+      background:
+        url("Background.png") center center / cover no-repeat,
+        var(--white);
+      touch-action: none;
+    }
+    .canvas-container.select-mode {
+      background: var(--white) !important;
+    }
+    .canvas-cell {
+      position: relative;
+      z-index: 1;
+      border: 1px solid var(--white);
+      background: transparent;
+      aspect-ratio: 1;
+    }
+    .canvas-cell.reserved {
+      background: var(--red) !important;
+      pointer-events: none;
+    }
+    .canvas-cell.available {
+      background: var(--green) !important;
+    }
+    .canvas-cell.selected {
+      background: var(--orange) !important;
+    }
+
+    /* Clickable upload containers */
+    .canvas-upload {
+      z-index: 2;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+    }
+    .canvas-upload img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    /* Tooltip for URLs */
+    #link-tooltip {
+      position: absolute;
+      pointer-events: none;
+      background: rgba(0,0,0,0.75);
+      color: #fff;
+      padding: 4px 6px;
+      border-radius: 3px;
+      font-size: 0.85rem;
+      white-space: nowrap;
+      z-index: 100;
+      display: none;
+    }
+
+    /* Confirm bar */
+    #selection-bar {
+      position: fixed;
+      bottom: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      display: none;
+    }
+    #confirm-btn {
+      padding: 0.5rem 1.5rem;
+      background: var(--duck);
+      color: var(--white);
+      border: none;
+      border-radius: 4px;
+      font-size: 1rem;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+    #confirm-btn.enabled {
+      cursor: pointer;
+      opacity: 1;
+    }
+
+    /* Gallery Modal */
+    .gallery-modal {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.9);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 30;
+    }
+    .gallery-modal[aria-hidden="false"] {
+      display: flex;
+    }
+    .gallery-content {
+      position: relative;
+      width: 90%; max-width: 900px;
+      height: 90%; max-height: 90%;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .gallery-slide {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      width: 100%; height: 100%;
+    }
+    .gallery-slide.active {
+      display: flex;
+    }
+    .gallery-slide img {
+      max-width: 100%;
+      max-height: 80%;
+      object-fit: contain;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+    }
+    .gallery-caption {
+      color: var(--white);
+      font-size: 1rem;
+    }
+    .gallery-arrow,
+    .gallery-close {
+      position: absolute;
+      color: var(--white);
+      background: rgba(0,0,0,0.5);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      cursor: pointer;
+    }
+    .gallery-arrow {
+      width: 2.5rem; height: 2.5rem;
+      font-size: 2rem; top: 50%;
+      transform: translateY(-50%);
+    }
+    .gallery-arrow.prev {
+      left: 1rem;
+    }
+    .gallery-arrow.next {
+      right: 1rem;
+    }
+    .gallery-close {
+      top: 1rem; right: 1rem;
+      width: 2.5rem; height: 2.5rem;
+      font-size: 2.5rem;
+      transform: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="brand">GradGrid 2025</div>
+    <div class="info">
+      <div>Sold: <strong id="sold-count">0</strong></div>
+      <div>Available: <strong id="avail-count">600</strong></div>
+      <div>Price: <strong id="price-count">$0/plot</strong></div>
+    </div>
+    <div class="menu">
+      <a id="home-btn">Home</a>
+      <a id="buy-plot-btn">Buy Plot</a>
+      <a id="gallery-btn">Gallery of Uploads</a>
+      <a id="clear-grid-btn">Clear Grid</a>
+      <a id="faq-btn">Help / FAQ</a>
+    </div>
+  </nav>
+
+  <!-- COUNT MODAL -->
+  <div class="modal" id="count-modal">
+    <div class="modal-content">
+      <h2>How many plots?</h2>
+      <div class="options">
+        <label><input type="radio" name="plot-count" value="1" checked>1</label>
+        <label><input type="radio" name="plot-count" value="2">2</label>
+        <label><input type="radio" name="plot-count" value="4">4</label>
+        <label><input type="radio" name="plot-count" value="9">9</label>
+        <label><input type="radio" name="plot-count" value="16">16</label>
+      </div>
+      <button id="start-selection-btn">Next</button>
+    </div>
+  </div>
+
+  <!-- INSTRUCTIONS -->
+  <div class="instructions" id="instructions"></div>
+
+  <!-- CONFIRM BAR -->
+  <div id="selection-bar">
+    <button id="confirm-btn">Confirm</button>
+  </div>
+
+  <!-- GRID CANVAS -->
+  <div class="canvas-container" id="canvas"></div>
+
+  <!-- GALLERY MODAL -->
+  <div class="gallery-modal" id="gallery-modal" aria-hidden="true" role="dialog" aria-label="Gallery of Uploads">
+    <div class="gallery-content" id="gallery-content"></div>
+    <div class="gallery-arrow prev" id="gallery-prev" aria-label="Previous slide">&#10094;</div>
+    <div class="gallery-arrow next" id="gallery-next" aria-label="Next slide">&#10095;</div>
+    <div class="gallery-close" id="gallery-close" aria-label="Close gallery">&times;</div>
+  </div>
+
+  <!-- URL Tooltip -->
+  <div id="link-tooltip"></div>
+
+  <script>
+    // —— Config & State —— 
+    const GRID_COLS = 20, GRID_ROWS = 30, TOTAL = GRID_COLS * GRID_ROWS;
+    let isSelecting = false, isMouseDown = false, isDragging = false;
+    let requiredCount = 1, startCell = null, endCell = null, refreshInterval;
+    const canvas = document.getElementById('canvas');
+    const instructions = document.getElementById('instructions');
+    const selBar = document.getElementById('selection-bar');
+    const confirmBtn = document.getElementById('confirm-btn');
+    const tooltip = document.getElementById('link-tooltip');
+
+    // —— Build grid cells —— 
+    const cells = [];
+    for (let i = 0; i < TOTAL; i++) {
+      const c = document.createElement('div');
+      c.className = 'canvas-cell';
+      canvas.appendChild(c);
+      cells.push(c);
+    }
+
+    // —— Helpers —— 
+    const idxToRC = i => ({ row: Math.floor(i/GRID_COLS), col: i % GRID_COLS });
+    const cellIndex = el => cells.indexOf(el);
+    const getReserved = () => JSON.parse(localStorage.getItem('gradgrid-reserved') || '[]');
+    const getUploads  = () => JSON.parse(localStorage.getItem('gradgrid-uploads')  || '[]');
+
+    // —— Render grid & uploads —— 
+    function renderGrid() {
+      // Clear previous
+      document.querySelectorAll('.canvas-upload').forEach(e => e.remove());
+      cells.forEach(c => c.className = 'canvas-cell');
+
+      if (!isSelecting) {
+        getUploads().forEach(u => {
+          let container;
+          if (u.link) {
+            container = document.createElement('a');
+            container.href   = u.link;
+            container.target = '_blank';
+            container.rel    = 'noopener noreferrer';
+          } else {
+            container = document.createElement('div');
+          }
+          container.className = 'canvas-upload';
+          container.style.gridRowStart    = u.minR + 1;
+          container.style.gridRowEnd      = u.maxR + 2;
+          container.style.gridColumnStart = u.minC + 1;
+          container.style.gridColumnEnd   = u.maxC + 2;
+
+          // Tooltip handlers for links
+          if (u.link) {
+            container.addEventListener('mouseenter', () => {
+              tooltip.textContent = u.link;
+              tooltip.style.display = 'block';
+            });
+            container.addEventListener('mousemove', e => {
+              tooltip.style.left = (e.pageX + 10) + 'px';
+              tooltip.style.top  = (e.pageY + 10) + 'px';
+            });
+            container.addEventListener('mouseleave', () => {
+              tooltip.style.display = 'none';
+            });
+          }
+
+          const img = document.createElement('img');
+          img.src = u.data;
+          container.appendChild(img);
+          canvas.appendChild(container);
+        });
+      }
+
+      if (isSelecting) {
+        const used = new Set();
+        getReserved().forEach(rc => used.add(rc.r * GRID_COLS + rc.c));
+        getUploads().forEach(u => {
+          for (let r = u.minR; r <= u.maxR; r++)
+            for (let c = u.minC; c <= u.maxC; c++)
+              used.add(r * GRID_COLS + c);
+        });
+        cells.forEach((c,i) => {
+          c.classList.add( used.has(i) ? 'reserved' : 'available' );
+        });
+      }
+
+      // Update counters
+      const allUsed = new Set();
+      getReserved().forEach(rc => allUsed.add(rc.r * GRID_COLS + rc.c));
+      getUploads().forEach(u => {
+        for (let r = u.minR; r <= u.maxR; r++)
+          for (let c = u.minC; c <= u.maxC; c++)
+            allUsed.add(r * GRID_COLS + c);
+      });
+      document.getElementById('sold-count').textContent  = allUsed.size;
+      document.getElementById('avail-count').textContent = TOTAL - allUsed.size;
+    }
+
+    // —— Selection logic —— 
+    function clearSelection(){
+      cells.forEach(c => c.classList.remove('selected'));
+    }
+    function updateInstructions() {
+      const selCount = cells.filter(c => c.classList.contains('selected')).length;
+      const diff = requiredCount - selCount;
+      if      (diff > 0) instructions.textContent = `Select: ${diff} more plot${diff>1?'s':''}.`;
+      else if (diff < 0) instructions.textContent = `Remove ${-diff} plot${-diff>1?'s':''}.`;
+      else               instructions.textContent = `Perfect! ${requiredCount} plot${requiredCount>1?'s':''} selected.`;
+    }
+    function drawSelection(){
+      clearSelection();
+      if (!startCell || !endCell) return;
+      const i1 = cellIndex(startCell), i2 = cellIndex(endCell);
+      const {row:r1,col:c1} = idxToRC(i1), {row:r2,col:c2} = idxToRC(i2);
+      const minR = Math.min(r1,r2), maxR = Math.max(r1,r2);
+      const minC = Math.min(c1,c2), maxC = Math.max(c1,c2);
+      for (let r=minR; r<=maxR; r++)
+        for (let c=minC; c<=maxC; c++){
+          const cell = cells[r * GRID_COLS + c];
+          if (!cell.classList.contains('reserved'))
+            cell.classList.add('selected');
+        }
+      updateInstructions();
+    }
+    function finalizeSelection() {
+      const ok = cells.filter(c => c.classList.contains('selected')).length === requiredCount;
+      confirmBtn.disabled = !ok;
+      confirmBtn.classList.toggle('enabled', ok);
+      selBar.style.display = 'block';
+      updateInstructions();
+    }
+
+    // —— Button handlers —— 
+    document.getElementById('buy-plot-btn').onclick = () => {
+      document.getElementById('count-modal').style.display = 'flex';
+    };
+    document.getElementById('home-btn').onclick = () => {
+      isSelecting = false; isMouseDown = false;
+      canvas.classList.remove('select-mode');
+      instructions.style.display = selBar.style.display = 'none';
+      clearSelection(); renderGrid();
+    };
+    document.getElementById('clear-grid-btn').onclick = () => {
+      localStorage.removeItem('gradgrid-reserved');
+      localStorage.removeItem('gradgrid-uploads');
+      localStorage.removeItem('gradgrid-reservation');
+      isSelecting = false; isMouseDown = false;
+      canvas.classList.remove('select-mode');
+      instructions.style.display = selBar.style.display = 'none';
+      clearSelection(); renderGrid();
+    };
+    document.getElementById('start-selection-btn').onclick = () => {
+      requiredCount = +document.querySelector('input[name="plot-count"]:checked').value;
+      document.getElementById('count-modal').style.display = 'none';
+      isSelecting = true;
+      canvas.classList.add('select-mode');
+      instructions.style.display = 'block';
+      selBar.style.display = 'none';
+      instructions.textContent = `Select: ${requiredCount} plot${requiredCount>1?'s':''}.`;
+      renderGrid();
+    };
+
+    // —— Confirm selection —— 
+    confirmBtn.onclick = () => {
+      if (confirmBtn.disabled) return;
+      const existing = getReserved();
+      const occupied = new Set(existing.map(rc => rc.r * GRID_COLS + rc.c));
+      const i1 = cellIndex(startCell), i2 = cellIndex(endCell);
+      const {row:r1,col:c1} = idxToRC(i1), {row:r2,col:c2} = idxToRC(i2);
+      const minR = Math.min(r1,r2), maxR = Math.max(r1,r2);
+      const minC = Math.min(c1,c2), maxC = Math.max(c1,c2);
+
+      const newIndices = [];
+      for (let r=minR; r<=maxR; r++)
+        for (let c=minC; c<=maxC; c++)
+          newIndices.push(r * GRID_COLS + c);
+
+      for (const idx of newIndices) {
+        if (occupied.has(idx)) {
+          alert('Sorry—some of those plots were just taken. Please re-select.');
+          startCell = endCell = null;
+          clearSelection(); finalizeSelection(); renderGrid();
+          return;
+        }
+      }
+
+      const reserved = existing.slice();
+      newIndices.forEach(idx => {
+        const {row, col} = idxToRC(idx);
+        reserved.push({ r: row, c: col });
+      });
+      localStorage.setItem('gradgrid-reserved', JSON.stringify(reserved));
+      localStorage.setItem('gradgrid-reservation', JSON.stringify({
+        minR, maxR, minC, maxC,
+        width:  maxC - minC + 1,
+        height: maxR - minR + 1,
+        area:   requiredCount,
+        price:  0
+      }));
+
+      instructions.style.display = 'none';
+      window.location.href = 'payment.html';
+    };
+
+    // —— Drag-to-select —— 
+    cells.forEach(cell => {
+      cell.addEventListener('mousedown', () => {
+        if (!isSelecting || cell.classList.contains('reserved')) return;
+        isMouseDown = true;
+        startCell = cell;
+        endCell = null;
+        clearSelection();
+        selBar.style.display = 'none';
+      });
+      cell.addEventListener('mouseover', () => {
+        if (isSelecting && isMouseDown && !cell.classList.contains('reserved')) {
+          endCell = cell;
+          drawSelection();
+        }
+      });
+    });
+    function onRelease() {
+      if (isSelecting && isMouseDown) {
+        isMouseDown = false;
+        finalizeSelection();
+      }
+      if (isDragging) {
+        isDragging = false;
+        if (refreshInterval) clearInterval(refreshInterval);
+        refreshInterval = setInterval(renderGrid, 5000);
+      }
+    }
+    document.addEventListener('mouseup', onRelease);
+    document.addEventListener('touchend', onRelease);
+    canvas.addEventListener('mousedown', () => {
+      isDragging = true;
+      if (refreshInterval) clearInterval(refreshInterval);
+    });
+    canvas.addEventListener('touchstart', () => {
+      isDragging = true;
+      if (refreshInterval) clearInterval(refreshInterval);
+    });
+
+    // —— Init & auto-refresh —— 
+    window.addEventListener('DOMContentLoaded', () => {
+      renderGrid();
+      refreshInterval = setInterval(renderGrid, 5000);
+    });
+
+    // —— Gallery logic —— 
+    const galleryBtn     = document.getElementById('gallery-btn');
+    const galleryModal   = document.getElementById('gallery-modal');
+    const galleryContent = document.getElementById('gallery-content');
+    const galleryPrev    = document.getElementById('gallery-prev');
+    const galleryNext    = document.getElementById('gallery-next');
+    const galleryClose   = document.getElementById('gallery-close');
+    let currentSlide     = 0;
+
+    function showGalleryModal() {
+      galleryContent.innerHTML = '';
+      const uploads = getUploads();
+      if (uploads.length === 0) {
+        const msg = document.createElement('div');
+        msg.className = 'gallery-slide active';
+        msg.innerHTML = '<div class="gallery-caption">No uploads to display.</div>';
+        galleryContent.appendChild(msg);
+      } else {
+        uploads.forEach((u, i) => {
+          const slide = document.createElement('div');
+          slide.className = 'gallery-slide' + (i === 0 ? ' active' : '');
+          slide.dataset.index = i;
+          const img = document.createElement('img');
+          img.src = u.data;
+          img.alt = `Upload ${i + 1}`;
+          slide.appendChild(img);
+          const cap = document.createElement('div');
+          cap.className = 'gallery-caption';
+          cap.textContent = `Upload ${i + 1}`;
+          slide.appendChild(cap);
+          galleryContent.appendChild(slide);
+        });
+      }
+      currentSlide = 0;
+      galleryModal.setAttribute('aria-hidden', 'false');
+    }
+
+    function navigateGallery(n) {
+      const slides = Array.from(galleryContent.querySelectorAll('.gallery-slide'));
+      if (!slides.length) return;
+      slides[currentSlide].classList.remove('active');
+      currentSlide = (n + slides.length) % slides.length;
+      slides[currentSlide].classList.add('active');
+    }
+
+    galleryBtn.addEventListener('click', showGalleryModal);
+    galleryClose.addEventListener('click', () => galleryModal.setAttribute('aria-hidden', 'true'));
+    galleryPrev.addEventListener('click', () => navigateGallery(currentSlide - 1));
+    galleryNext.addEventListener('click', () => navigateGallery(currentSlide + 1));
+    galleryModal.addEventListener('click', e => {
+      if (e.target === galleryModal) galleryModal.setAttribute('aria-hidden', 'true');
+    });
+    document.addEventListener('keydown', e => {
+      if (galleryModal.getAttribute('aria-hidden') === 'false') {
+        if (e.key === 'Escape') galleryModal.setAttribute('aria-hidden', 'true');
+        if (e.key === 'ArrowLeft') navigateGallery(currentSlide - 1);
+        if (e.key === 'ArrowRight') navigateGallery(currentSlide + 1);
+      }
+    });
+  </script>
+</body>
+</html>

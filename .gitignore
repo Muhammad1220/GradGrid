@@ -1,0 +1,11 @@
+# Node modules (if any)
+node_modules/
+
+# Environment files
+.env
+
+# OS artifacts
+.DS_Store
+
+# Logs
+*.log

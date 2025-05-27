@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Gallery of Uploads</title>
+  <style>
+    :root { --navy:#001f3f; --white:#ffffff; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body {
+      font-family:Arial,sans-serif;
+      background:var(--navy);
+      color:var(--white);
+      overflow:hidden;
+    }
+    .gallery-container {
+      position:fixed; top:0; left:0; right:0; bottom:0;
+      display:flex; align-items:center; justify-content:center;
+      background:rgba(0,0,0,0.9); z-index:100;
+    }
+    .gallery-content {
+      position:relative;
+      width:90%; max-width:900px;
+      height:90%; max-height:90%;
+      overflow:hidden;
+    }
+    .slide {
+      display:none;
+      flex-direction:column;
+      align-items:center;
+      text-align:center;
+      width:100%; height:100%;
+    }
+    .slide.active { display:flex; }
+    .slide img {
+      max-width:100%; max-height:80%;
+      object-fit:contain; border-radius:8px;
+      margin-bottom:1rem;
+    }
+    .caption { font-size:1.1rem; }
+
+    .nav-arrow,
+    .close-btn {
+      position:absolute;
+      background:rgba(0,0,0,0.5);
+      border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      user-select:none; cursor:pointer;
+      color:var(--white);
+    }
+    .nav-arrow {
+      top:50%; transform:translateY(-50%);
+      width:2.5rem; height:2.5rem;
+      font-size:2rem;
+    }
+    .nav-arrow.prev { left:1rem; }
+    .nav-arrow.next { right:1rem; }
+    .close-btn {
+      top:1rem; right:1rem;
+      width:2.5rem; height:2.5rem;
+      font-size:2.5rem; transform:none;
+      text-decoration:none;
+    }
+    .nav-arrow:hover,
+    .close-btn:hover { background:rgba(0,0,0,0.8); }
+  </style>
+</head>
+<body>
+
+  <div class="gallery-container" id="gallery-container"
+       role="dialog" aria-modal="true" aria-label="Gallery of Uploads">
+
+    <div class="gallery-content" id="gallery-content">
+      <!-- JS will inject your real uploads here -->
+    </div>
+
+    <div class="nav-arrow prev" id="prev-slide" aria-label="Previous slide">&#10094;</div>
+    <div class="nav-arrow next" id="next-slide" aria-label="Next slide">&#10095;</div>
+    <a href="index.html" class="close-btn" id="close-gallery" aria-label="Close gallery">&times;</a>
+  </div>
+
+  <script>
+    function getUploads() {
+      return JSON.parse(localStorage.getItem('gradgrid-uploads') || '[]');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const uploads = getUploads();
+      const container = document.getElementById('gallery-content');
+
+      if (uploads.length === 0) {
+        const msg = document.createElement('div');
+        msg.className = 'slide active';
+        msg.innerHTML = '<div class="caption">No uploads to display.</div>';
+        container.appendChild(msg);
+      } else {
+        uploads.forEach((u,i) => {
+          const slide = document.createElement('div');
+          slide.className = 'slide' + (i===0 ? ' active' : '');
+          slide.dataset.index = i;
+
+          const img = document.createElement('img');
+          img.src = u.data;
+          img.alt = `Upload ${i+1}`;
+          slide.appendChild(img);
+
+          const cap = document.createElement('div');
+          cap.className = 'caption';
+          cap.textContent = `Upload ${i+1}`;
+          slide.appendChild(cap);
+
+          container.appendChild(slide);
+        });
+      }
+
+      const slides = Array.from(document.querySelectorAll('.slide'));
+      let current = 0;
+      function showSlide(n) {
+        slides[current].classList.remove('active');
+        current = (n + slides.length) % slides.length;
+        slides[current].classList.add('active');
+      }
+
+      document.getElementById('prev-slide').onclick = () => showSlide(current-1);
+      document.getElementById('next-slide').onclick = () => showSlide(current+1);
+      document.getElementById('close-gallery').onclick = e => {
+        e.preventDefault();
+        window.location.href = 'index.html';
+      };
+      document.getElementById('gallery-container').onclick = e => {
+        if (e.target === e.currentTarget) window.location.href = 'index.html';
+      };
+      document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') window.location.href = 'index.html';
+        if (e.key === 'ArrowLeft') showSlide(current-1);
+        if (e.key === 'ArrowRight') showSlide(current+1);
+      });
+    });
+  </script>
+</body>
+</html>

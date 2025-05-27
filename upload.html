@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Upload Your Plot Content</title>
+
+  <!-- Cropper.js CSS -->
+  <link
+    href="https://unpkg.com/cropperjs@1.5.13/dist/cropper.min.css"
+    rel="stylesheet"/>
+
+  <style>
+    :root {
+      --navy:   #001f3f;
+      --duck:   #00bfa5;
+      --gray:   #e0e0e0;
+      --white:  #ffffff;
+      --light:  #fafafa;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Arial, sans-serif;
+      background: var(--gray);
+      color: var(--navy);
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+    }
+    .navbar {
+      height: 60px; background: var(--navy);
+      color: var(--white); display: flex;
+      align-items: center; justify-content: space-between;
+      padding: 0 1.5rem;
+    }
+    .navbar .brand {
+      font-size: 1.25rem; font-weight: bold;
+      color: var(--duck);
+    }
+    .navbar a {
+      color: var(--white); text-decoration: none;
+      margin-left: 1rem; font-weight: bold;
+      cursor: pointer;
+    }
+    main {
+      flex: 1; max-width: 600px;
+      margin: 2rem auto; background: var(--white);
+      padding: 2rem; border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h2 { margin-bottom: 1rem; }
+    #plot-info { margin-bottom: 1.5rem; font-weight: bold; }
+
+    .already-uploaded {
+      padding: 1rem;
+      background: #ffeedd;
+      border: 1px solid #ccaa99;
+      border-radius: 4px;
+      margin-bottom: 1rem;
+      color: #663300;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    form {
+      display: flex; flex-direction: column;
+      gap: 1rem;
+    }
+    .types { display: flex; gap: 1rem; font-weight: bold; }
+
+    .links label {
+      font-weight: bold;
+      display: flex;
+      flex-direction: column;
+      font-size: 0.9rem;
+    }
+    .links input[type="url"] {
+      margin-top: 0.25rem;
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    textarea {
+      width: 100%; padding: 0.5rem;
+      border: 1px solid #ccc; border-radius: 4px;
+      height: 100px; resize: vertical; font-size: 68px;
+    }
+    button {
+      padding: 0.75rem; background: var(--duck);
+      color: var(--white); border: none;
+      border-radius: 4px; font-size: 1rem;
+      cursor: pointer;
+    }
+    .reset-btn {
+      margin-top: 1rem;
+    }
+
+    .crop-container {
+      width:100%; max-height:400px;
+      margin-top:1rem; text-align:center;
+    }
+    .crop-container img {
+      max-width:100%; display:inline-block;
+    }
+    .crop-controls {
+      margin-top:0.5rem; display:flex;
+      gap:0.5rem; justify-content:center;
+    }
+    .crop-controls button {
+      padding:0.5rem 0.75rem; font-size:0.9rem;
+      border:1px solid #ccc; border-radius:4px;
+      background:#fff; cursor:pointer;
+    }
+    .crop-controls button img {
+      width:20px; height:20px; display:block; margin:auto;
+    }
+
+    .text-controls {
+      display: flex; gap: 0.5rem;
+      justify-content: center; margin-top: 0.5rem;
+      background: #000; padding: 0.5rem; border-radius: 4px;
+    }
+    .text-controls select,
+    .text-controls button,
+    .text-controls input[type="color"] {
+      background: #000; color: #fff;
+      border: 1px solid #555; border-radius: 4px;
+      padding: 0.4rem 0.6rem; font-size: 0.9rem;
+      cursor: pointer;
+    }
+    .text-controls button.active {
+      background: var(--duck);
+      border-color: var(--duck);
+    }
+    .text.preview {
+      margin-top: 0.5rem;
+      background: #000; color: #fff;
+      border: 1px solid #ddd; overflow: auto;
+      font-size: 68px; padding: 0.5rem;
+      white-space: pre-wrap; word-break: break-word;
+    }
+
+    #final-preview {
+      position: relative;
+      width: 100vw; left: 50%;
+      margin-left: -50vw; margin-top: 1rem;
+      text-align: center;
+    }
+    #final-preview img,
+    #final-preview .gif-crop-container {
+      border: 1px solid #ddd; border-radius: 4px;
+      max-width: 35vw; height: auto;
+      display: inline-block; margin: 0 auto;
+    }
+    .gif-crop-container {
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+  <a href="payment.html">Back to Payment</a>
+
+  <nav class="navbar">
+    <div class="brand">GradGrid 2025</div>
+    <div>
+      <a href="index.html">Home</a>
+      <a href="payment.html">Back to Payment</a>
+    </div>
+  </nav>
+
+  <main>
+    <h2>Upload Your Plot Content</h2>
+    <div id="plot-info"></div>
+
+    <form id="upload-form">
+      <div class="types">
+        <label><input type="radio" name="type" value="image" checked> Image</label>
+        <label><input type="radio" name="type" value="text"> Text</label>
+      </div>
+
+      <div class="links">
+        <label>
+          Optional link (where clicking your plot should go):
+          <input type="url" id="link-input"
+                 placeholder="https://example.com"
+                 pattern="https?://.+"
+                 title="Include http:// or https://">
+        </label>
+      </div>
+
+      <div id="image-group">
+        <label>
+          Choose PNG/GIF/JPG (max 3 MB):
+          <input type="file" id="image-input"
+                 accept="image/png,image/gif,image/jpeg">
+        </label>
+      </div>
+
+      <div id="text-group" style="display:none;">
+        <label>
+          Enter text (max 300 chars):
+          <textarea id="text-input"
+                    maxlength="300"
+                    placeholder="Your message…"></textarea>
+        </label>
+        <div class="text-controls" id="text-controls" style="display:none;">
+          <select id="font-select">
+            <option>Arial</option><option>Helvetica</option>
+            <option>Times New Roman</option><option>Georgia</option>
+            <option>Verdana</option><option>Tahoma</option>
+            <option>Trebuchet MS</option><option>Courier New</option>
+            <option>Lucida Console</option><option>Impact</option>
+          </select>
+          <input type="color" id="text-color-picker"
+                 value="#ffffff" title="Text Color">
+          <input type="color" id="highlight-color-picker"
+                 value="#000000" title="Highlight Color">
+          <button type="button" id="bold-btn"><b>B</b></button>
+          <button type="button" id="italic-btn"><i>I</i></button>
+          <button type="button" id="underline-btn"><u>U</u></button>
+          <button type="button" id="text-zoom-in">+</button>
+          <button type="button" id="text-zoom-out">–</button>
+        </div>
+        <div class="text preview" id="text-preview" style="display:none;"></div>
+      </div>
+
+      <button type="submit">Submit</button>
+    </form>
+
+    <div class="preview" id="preview">
+      <div class="crop-container" id="crop-container" style="display:none;">
+        <img id="crop-target" alt="Crop target">
+      </div>
+      <div class="crop-controls" id="crop-controls" style="display:none;">
+        <button type="button" id="zoom-in"><img src="zoom-in.png" alt="⊕"></button>
+        <button type="button" id="zoom-out"><img src="zoom-out.png" alt="⊖"></button>
+        <button type="button" id="rotate-left"><img src="rotate-left.png" alt="↺"></button>
+        <button type="button" id="rotate-right"><img src="rotate-right.png" alt="↻"></button>
+        <button type="button" id="reset"><img src="reset.png" alt="⟳"></button>
+      </div>
+      <div id="final-preview" style="display:none;">
+        <h3>Final Plot Preview:</h3>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://unpkg.com/cropperjs@1.5.13/dist/cropper.min.js"></script>
+  <script>
+    // helper to show non-blocking in-page toasts
+    function showToast(message, type) {
+      const toast = document.createElement('div');
+      toast.style.marginBottom   = '10px';
+      toast.style.padding         = '12px';
+      toast.style.borderRadius    = '4px';
+      toast.style.boxShadow       = '0 2px 6px rgba(0,0,0,0.2)';
+      toast.style.backgroundColor = type === 'error' ? '#f44336' : '#4CAF50';
+      toast.style.color           = 'white';
+      toast.textContent           = message;
+  
+      const container = document.getElementById('toast-container');
+      container.appendChild(toast);
+  
+      setTimeout(() => {
+        container.removeChild(toast);
+      }, 3000);
+    }
+  
+    document.addEventListener('DOMContentLoaded', () => {
+      const reservation = JSON.parse(localStorage.getItem('gradgrid-reservation')||'{}');
+      const infoEl      = document.getElementById('plot-info');
+      const uploadForm  = document.getElementById('upload-form');
+      const imageGroup  = document.getElementById('image-group');
+      const textGroup   = document.getElementById('text-group');
+      const cropContainer = document.getElementById('crop-container');
+      const cropControls  = document.getElementById('crop-controls');
+      const finalPreview  = document.getElementById('final-preview');
+      const imageInput    = document.getElementById('image-input');
+      const textInput     = document.getElementById('text-input');
+      const textControls  = document.getElementById('text-controls');
+      const textPreview   = document.getElementById('text-preview');
+      const fontSelect    = document.getElementById('font-select');
+      const colorPicker   = document.getElementById('text-color-picker');
+      const highlightPicker = document.getElementById('highlight-color-picker');
+      const boldBtn       = document.getElementById('bold-btn');
+      const italicBtn     = document.getElementById('italic-btn');
+      const underlineBtn  = document.getElementById('underline-btn');
+      const zoomInTxt     = document.getElementById('text-zoom-in');
+      const zoomOutTxt    = document.getElementById('text-zoom-out');
+      let cropper         = null;
+      let originalType    = '';
+      let tFont   = 'Arial',
+          tSize   = 68,
+          tBold   = false,
+          tItalic = false,
+          tUnder  = false,
+          tColor  = '#ffffff',
+          tHighlight = '#000000';
+
+      // Reservation check
+      if (reservation.minR == null) {
+        infoEl.innerHTML = '<p style="color:red">No reservation found. Please start over.</p>';
+        uploadForm.style.display = 'none';
+        document.getElementById('preview').style.display = 'none';
+        return;
+      }
+      const w = reservation.maxC - reservation.minC + 1;
+      const h = reservation.maxR - reservation.minR + 1;
+      window.plotRatio = w / h;
+      const row = n => String.fromCharCode(65 + n);
+      const rows = reservation.minR === reservation.maxR
+        ? row(reservation.minR)
+        : `${row(reservation.minR)}–${row(reservation.maxR)}`;
+      const cols = reservation.minC === reservation.maxC
+        ? reservation.minC + 1
+        : `${reservation.minC + 1}–${reservation.maxC + 1}`;
+      infoEl.textContent = `Plot: Rows ${rows}, Cols ${cols}`;
+
+      // Already uploaded?
+      const uploads = JSON.parse(localStorage.getItem('gradgrid-uploads')||'[]');
+      const already = uploads.some(u =>
+        u.minR === reservation.minR &&
+        u.maxR === reservation.maxR &&
+        u.minC === reservation.minC &&
+        u.maxC === reservation.maxC
+      );
+      if (already) {
+        infoEl.insertAdjacentHTML('afterend',
+          '<div class="already-uploaded">You’ve already uploaded content for this plot.</div>'
+        );
+        const banner = document.querySelector('.already-uploaded');
+        banner.insertAdjacentHTML('afterend',
+          '<button id="reset-upload" type="button" aria-label="Change plot content" class="reset-btn">Change Content</button>'
+        );
+        uploadForm.style.display  = 'none';
+        document.getElementById('preview').style.display = 'none';
+
+        const resetBtn = document.getElementById('reset-upload');
+        resetBtn.addEventListener('click', () => {
+          if (!confirm('Are you sure you want to replace your upload?')) return;
+
+          // Remove stored entry
+          const arr = JSON.parse(localStorage.getItem('gradgrid-uploads')||'[]');
+          const filtered = arr.filter(u =>
+            !(u.minR===reservation.minR &&
+              u.maxR===reservation.maxR &&
+              u.minC===reservation.minC &&
+              u.maxC===reservation.maxC)
+          );
+          localStorage.setItem('gradgrid-uploads', JSON.stringify(filtered));
+
+          // Tear down cropper
+          if (cropper) { cropper.destroy(); cropper = null; }
+          originalType = '';
+
+          // Clear & hide final preview
+          finalPreview.querySelectorAll('img, .gif-crop-container').forEach(el=>el.remove());
+          finalPreview.style.display = 'none';
+
+          // Reset text mode
+          textInput.value = '';
+          textControls.style.display = 'none';
+          textPreview.style.display = 'none';
+          tFont = 'Arial'; tSize = 68; tBold = false; tItalic = false; tUnder = false;
+          tColor = '#ffffff'; tHighlight = '#000000';
+          boldBtn.classList.remove('active');
+          italicBtn.classList.remove('active');
+          underlineBtn.classList.remove('active');
+
+          // Restore default mode
+          document.querySelector('input[name="type"][value="image"]').checked = true;
+          imageGroup.style.display      = 'block';
+          textGroup.style.display       = 'none';
+          cropContainer.style.display   = 'none';
+          cropControls.style.display    = 'none';
+
+          // Clear inputs
+          document.getElementById('image-input').value = '';
+          const linkInput = document.getElementById('link-input');
+          if (linkInput) linkInput.value = '';
+
+          // Remove banner & button
+          banner.remove();
+          resetBtn.remove();
+
+          // Focus first field
+          document.getElementById('image-input').focus();
+        });
+
+        return;
+      }
+
+      // Type toggle
+      document.querySelectorAll('input[name="type"]').forEach(radio=>{
+        radio.addEventListener('change', ()=>{
+          const isImg = radio.value==='image';
+          imageGroup.style.display      = isImg?'block':'none';
+          textGroup.style.display       = isImg?'none':'block';
+          cropContainer.style.display   = 'none';
+          cropControls.style.display    = 'none';
+          textControls.style.display    = 'none';
+          textPreview.style.display     = 'none';
+          finalPreview.style.display    = 'none';
+        });
+      });
+
+      // Image upload
+      imageInput.addEventListener('change', ()=>{
+        const file = imageInput.files[0];
+        if (!file) return;
+        if (file.size > 3*1024*1024) return showToast('File exceeds 3 MB', 'error');
+        originalType = file.type;
+        const reader = new FileReader();
+        reader.onload = ()=>{
+          finalPreview.querySelectorAll(':scope>:not(h3)').forEach(el=>el.remove());
+          finalPreview.style.display='block';
+          const img = document.getElementById('crop-target');
+          img.src = reader.result;
+          cropContainer.style.display = 'block';
+          cropControls.style.display = 'flex';
+          if (cropper) cropper.destroy();
+          cropper = new Cropper(img, {
+            aspectRatio: originalType==='image/gif'?NaN:window.plotRatio,
+            viewMode: 1,
+            autoCropArea: 1,
+            dragMode: 'none',
+            rotatable: originalType!=='image/gif',
+            background: false,
+            ready() { updateImgPreview() },
+            crop()  { updateImgPreview() }
+          });
+        };
+        reader.onerror = ()=>{
+          alert('Oops—couldn’t read that file. Try a different image.');
+        };
+        reader.readAsDataURL(file);
+      });
+
+
+      function updateImgPreview(){
+        finalPreview.querySelectorAll(':scope>:not(h3)').forEach(el=>el.remove());
+        const H=200,W=Math.round(H*window.plotRatio);
+        if(originalType==='image/gif'){
+          const box=cropper.getCropBoxData(),imgD=cropper.getImageData(),
+                sx=W/box.width,sy=H/box.height;
+          const container=document.createElement('div');
+          container.className='gif-crop-container';
+          container.style.width=W+'px';
+          container.style.height=H+'px';
+          const anim=document.createElement('img');
+          anim.src=document.getElementById('crop-target').src;
+          anim.style.width=imgD.naturalWidth*sx+'px';
+          anim.style.height=imgD.naturalHeight*sy+'px';
+          anim.style.transform=`translate(${-box.left*sx}px,${-box.top*sy}px)`;
+          anim.style.transformOrigin='top left';
+          container.appendChild(anim);
+          finalPreview.appendChild(container);
+          return;
+        }
+        const canvasEl=cropper.getCroppedCanvas({width:W,height:H}),
+              img2=document.createElement('img');
+        img2.src=canvasEl.toDataURL();
+        finalPreview.appendChild(img2);
+      }
+
+      ['zoom-in','zoom-out','rotate-left','rotate-right','reset'].forEach(id=>{
+        document.getElementById(id).onclick=()=>{
+          if(!cropper) return;
+          const ops={'zoom-in':()=>cropper.zoom(.1),
+                     'zoom-out':()=>cropper.zoom(-.1),
+                     'rotate-left':()=>cropper.rotate(-45),
+                     'rotate-right':()=>cropper.rotate(45),
+                     'reset':()=>cropper.reset()};
+          ops[id]();
+        };
+      });
+
+      // Text preview
+      function updateTextLive(){
+        textControls.style.display='flex';
+        textPreview.style.display='block';
+        finalPreview.style.display='block';
+        const w=textPreview.clientWidth;
+        textPreview.style.height=(w/window.plotRatio)+'px';
+        textPreview.textContent=textInput.value;
+        textPreview.style.fontFamily=tFont;
+        textPreview.style.fontSize=tSize+'px';
+        textPreview.style.fontWeight=tBold?'700':'400';
+        textPreview.style.fontStyle=tItalic?'italic':'normal';
+        textPreview.style.textDecoration=tUnder?'underline':'none';
+        textPreview.style.color=tColor;
+        textPreview.style.background=tHighlight;
+        const H=200,W=Math.round(H*window.plotRatio),
+              cnv=document.createElement('canvas');
+        cnv.width=W;cnv.height=H;
+        const ctx=cnv.getContext('2d');
+        ctx.fillStyle=tHighlight;ctx.fillRect(0,0,W,H);
+        ctx.fillStyle=tColor;
+        ctx.font=`${tItalic?'italic ':''}${tBold?'bold ':''}${tSize}px ${tFont}`;
+        ctx.textAlign='center';ctx.textBaseline='middle';
+        const lines=textInput.value.split('\n'),
+              lh=tSize*1.2,
+              startY=(H-lines.length*lh)/2+lh/2;
+        lines.forEach((l,i)=>{
+          const y=startY+i*lh;
+          ctx.fillText(l,W/2,y);
+          if(tUnder){
+            const m=ctx.measureText(l).width,
+                  uy=y+tSize/2;
+            ctx.beginPath();
+            ctx.moveTo(W/2-m/2,uy);
+            ctx.lineTo(W/2+m/2,uy);
+            ctx.lineWidth=2;ctx.strokeStyle=tColor;ctx.stroke();
+          }
+        });
+        finalPreview.querySelectorAll(':scope>img:not(.gif-crop-container img)')
+          .forEach(e=>e.remove());
+        const imgEl=document.createElement('img');
+        imgEl.src=cnv.toDataURL();
+        finalPreview.appendChild(imgEl);
+      }
+
+      textInput.addEventListener('input',updateTextLive);
+      fontSelect.onchange     =()=>{tFont=fontSelect.value;updateTextLive()};
+      colorPicker.oninput     =()=>{tColor=colorPicker.value;updateTextLive()};
+      highlightPicker.oninput =()=>{tHighlight=highlightPicker.value;updateTextLive()};
+      boldBtn.onclick         =()=>{tBold=!tBold;boldBtn.classList.toggle('active',tBold);updateTextLive()};
+      italicBtn.onclick       =()=>{tItalic=!tItalic;italicBtn.classList.toggle('active',tItalic);updateTextLive()};
+      underlineBtn.onclick    =()=>{tUnder=!tUnder;underlineBtn.classList.toggle('active',tUnder);updateTextLive()};
+      zoomInTxt.onclick       =()=>{tSize=Math.round(tSize*1.1);updateTextLive()};
+      zoomOutTxt.onclick      =()=>{tSize=Math.round(tSize*0.9);updateTextLive()};
+
+      // Submit
+      uploadForm.addEventListener('submit',e=>{
+        e.preventDefault();
+        const type=document.querySelector('input[name="type"]:checked').value;
+        const link=document.getElementById('link-input').value.trim();
+        if(link&&!/^https?:\/\//.test(link)){
+          return alert('Please include http:// or https://');
+        }
+        function finish(dataURL){
+          const key='gradgrid-uploads';
+          const arr=JSON.parse(localStorage.getItem(key)||'[]');
+          arr.push({
+            minR:reservation.minR,
+            maxR:reservation.maxR,
+            minC:reservation.minC,
+            maxC:reservation.maxC,
+            type,data:dataURL,link
+          });
+          localStorage.setItem(key,JSON.stringify(arr));
+          alert('Upload successful! Redirecting…');
+          window.location.href='final.html';
+        }
+        if(type==='image'){
+          if(originalType==='image/gif'){
+            const gifImg=finalPreview.querySelector('.gif-crop-container img');
+            return gifImg?finish(gifImg.src):alert('Something went wrong with your GIF.');
+          }
+          if(!cropper) return alert('Please select & adjust an image.');
+          cropper.getCroppedCanvas().toBlob(blob=>{
+            const r=new FileReader();
+            r.onload=()=>finish(r.result);
+            r.readAsDataURL(blob);
+          });
+        } else {
+          const lastImg=finalPreview.querySelector('img:not(.gif-crop-container img)');
+          return lastImg?finish(lastImg.src):alert('Please enter and preview your text.');
+        }
+      });
+    });
+  </script>
+
+  <!-- RELEASE-ON-LEAVE LOGIC -->
+  <script>
+    // track if the form was successfully submitted
+    let uploadConfirmed = false;
+    const form = document.getElementById('upload-form');
+    form.addEventListener('submit', () => {
+      uploadConfirmed = true;
+    });
+
+    // before unloading, if not confirmed, release the reserved plots
+    window.addEventListener('beforeunload', () => {
+      if (!uploadConfirmed) {
+        const reservation = JSON.parse(localStorage.getItem('gradgrid-reservation') || '{}');
+        if (reservation.minR != null) {
+          const stillReserved = JSON.parse(localStorage.getItem('gradgrid-reserved') || '[]')
+            .filter(cell =>
+              cell.r < reservation.minR ||
+              cell.r > reservation.maxR ||
+              cell.c < reservation.minC ||
+              cell.c > reservation.maxC
+            );
+          localStorage.setItem('gradgrid-reserved', JSON.stringify(stillReserved));
+          localStorage.removeItem('gradgrid-reservation');
+          localStorage.removeItem('gradgrid-requiredCount');
+        }
+      }
+    });
+  </script>
+</body>
+</html>

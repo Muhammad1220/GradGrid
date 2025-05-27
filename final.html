@@ -1,0 +1,120 @@
+<!DOCTYPE html> 
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Purchase Complete</title>
+  <style>
+    :root {
+      --navy:  #001f3f;
+      --duck:  #00bfa5;
+      --white: #ffffff;
+      --light: #fafafa;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      background: var(--light);
+      color: var(--navy);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    .navbar {
+      height: 60px;
+      background: var(--navy);
+      color: var(--white);
+      display: flex;
+      align-items: center;
+      padding: 0 1.5rem;
+    }
+    .navbar .brand {
+      font-size: 1.25rem;
+      font-weight: bold;
+      color: var(--duck);
+    }
+    main {
+      flex: 1;
+      max-width: 500px;
+      margin: 2rem auto;
+      background: var(--white);
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    h2 {
+      margin-top: 0;
+      margin-bottom: 1rem;
+    }
+    .summary p {
+      margin: 0.5rem 0;
+      font-size: 1rem;
+    }
+    #done-btn {
+      margin-top: 1.5rem;
+      padding: 0.75rem 1.5rem;
+      background: var(--duck);
+      color: var(--white);
+      border: none;
+      border-radius: 4px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar">
+    <div class="brand">GradGrid 2025</div>
+  </nav>
+
+  <main>
+    <h2>Purchase Complete!</h2>
+    <div class="summary" id="summary"></div>
+    <button id="done-btn">Back to Home</button>
+  </main>
+
+  <script>
+    // Retrieve payment and reservation details
+    const payment = JSON.parse(localStorage.getItem('gradgrid-payment') || '{}');
+    const res     = JSON.parse(localStorage.getItem('gradgrid-reservation') || '{}');
+
+    // Helper to convert row index to letter
+    function toLetter(n) {
+      return String.fromCharCode(65 + n);
+    }
+
+    // Build human-readable plot range
+    const rowLabel = res.minR === res.maxR
+      ? toLetter(res.minR)
+      : `${toLetter(res.minR)}–${toLetter(res.maxR)}`;
+    const colLabel = res.minC === res.maxC
+      ? (res.minC + 1)
+      : `${res.minC + 1}–${res.maxC + 1}`;
+
+    // Last 4 digits of card (placeholder)
+    const last4 = payment.number ? payment.number.slice(-4) : '----';
+
+    // Populate summary
+    document.getElementById('summary').innerHTML = `
+      <p><strong>Plots:</strong> Rows ${rowLabel}, Cols ${colLabel}</p>
+      <p><strong>Area:</strong> ${res.area || 0} plot(s)</p>
+      <p><strong>Charged to Card:</strong> •••• •••• •••• ${last4}</p>
+    `;
+
+    // Done button: clear temp data and return to home
+    document.getElementById('done-btn').addEventListener('click', () => {
+      localStorage.removeItem('gradgrid-requiredCount');
+      localStorage.removeItem('gradgrid-reservation');
+      localStorage.removeItem('gradgrid-payment');
+      localStorage.removeItem('gradgrid-paymentConfirmed');
+      window.location.href = 'index.html';
+    });
+  </script>
+</body>
+</html>

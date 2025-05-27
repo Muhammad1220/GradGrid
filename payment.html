@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Confirm Your Reservation</title>
+  <style>
+    :root {
+      --navy:  #001f3f;
+      --duck:  #00bfa5;
+      --white: #ffffff;
+      --light: #fafafa;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      background: var(--light);
+      color: var(--navy);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    .navbar {
+      height: 60px;
+      background: var(--navy);
+      color: var(--white);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1.5rem;
+    }
+    .navbar .brand {
+      font-size: 1.25rem;
+      font-weight: bold;
+      color: var(--duck);
+    }
+    .navbar a {
+      color: var(--white);
+      text-decoration: none;
+      margin-left: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    main {
+      flex: 1;
+      max-width: 400px;
+      margin: 2rem auto;
+      background: var(--white);
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h2 {
+      margin-top: 0;
+      margin-bottom: 1rem;
+    }
+    .summary p {
+      margin: 0.5rem 0;
+      font-size: 1rem;
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+    label {
+      display: flex;
+      flex-direction: column;
+      font-weight: bold;
+      font-size: 0.95rem;
+    }
+    input {
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 1rem;
+      margin-top: 0.25rem;
+    }
+    button {
+      padding: 0.75rem;
+      background: var(--duck);
+      color: var(--white);
+      border: none;
+      border-radius: 4px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar">
+    <div class="brand">GradGrid 2025</div>
+    <div>
+      <a href="index.html">Cancel</a>
+    </div>
+  </nav>
+
+  <main>
+    <div class="summary">
+      <h2>Confirm Your Reservation</h2>
+      <p>
+        <strong>Plots:</strong>
+        <span id="count-display">0</span>
+      </p>
+      <p>
+        <strong>Total:</strong>
+        $<span id="total-display">0.00</span>
+      </p>
+    </div>
+
+    <form id="pay-form">
+      <label>
+        Cardholder Name
+        <input type="text" id="card-name" placeholder="Jane Doe" required>
+      </label>
+      <label>
+        Card Number
+        <input type="text" id="card-number" maxlength="19" placeholder="1234 5678 9012 3456" required>
+      </label>
+      <label>
+        Expiry (MM/YY)
+        <input type="text" id="card-expiry" maxlength="5" placeholder="08/24" required>
+      </label>
+      <label>
+        CVC
+        <input type="text" id="card-cvc" maxlength="3" placeholder="123" required>
+      </label>
+      <button type="submit">Pay Now</button>
+    </form>
+  </main>
+
+  <script>
+    // 1) Fetch and display how many plots were chosen
+    const count = parseInt(localStorage.getItem('gradgrid-requiredCount') || '1', 10);
+    document.getElementById('count-display').textContent = count;
+
+    // 2) Grab your stored reservation data (which includes price per plot)
+    const reservation = JSON.parse(localStorage.getItem('gradgrid-reservation') || '{}');
+    const pricePerPlot = Number(reservation.price) || 0;
+
+    // 3) Calculate and render the total
+    const total = count * pricePerPlot;
+    document.getElementById('total-display').textContent = total.toFixed(2);
+
+    // 4) Handle form submission
+    document.getElementById('pay-form').addEventListener('submit', e => {
+      e.preventDefault();
+      // Collect and store payment info (stubbed)
+      const payment = {
+        name:   document.getElementById('card-name').value.trim(),
+        number: document.getElementById('card-number').value.replace(/\s+/g, ''),
+        expiry: document.getElementById('card-expiry').value.trim(),
+        cvc:    document.getElementById('card-cvc').value.trim()
+      };
+      localStorage.setItem('gradgrid-payment', JSON.stringify(payment));
+
+      // Redirect to upload page
+      window.location.href = 'upload.html';
+    });
+  </script>
+</body>
+</html>
