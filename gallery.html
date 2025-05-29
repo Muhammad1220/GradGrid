@@ -79,40 +79,62 @@
     <a href="index.html" class="close-btn" id="close-gallery" aria-label="Close gallery">&times;</a>
   </div>
 
+  <!-- 1. Load Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <!-- 2. Init Supabase client -->
   <script>
+    const SUPABASE_URL      = 'https://ljvfdbrxelmqyufxifsg.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.…Kr6A';
+    window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Override getUploads to use cloud data first
     function getUploads() {
-      return JSON.parse(localStorage.getItem('gradgrid-uploads') || '[]');
+      return window.cloudUploads || JSON.parse(localStorage.getItem('gradgrid-uploads') || '[]');
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
-      const uploads = getUploads();
-      const container = document.getElementById('gallery-content');
 
-      if (uploads.length === 0) {
+    document.addEventListener('DOMContentLoaded', async () => {
+      // 1. Fetch all uploads from Supabase
+      const { data: uploads, error } = await supabase
+        .from('uploads')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) {
+        console.error('Error loading uploads:', error);
+        window.cloudUploads = [];
+      } else {
+        window.cloudUploads = uploads;
+      }
+
+      // 2. Render gallery
+      const container = document.getElementById('gallery-content');
+      const data = getUploads();
+      if (data.length === 0) {
         const msg = document.createElement('div');
         msg.className = 'slide active';
         msg.innerHTML = '<div class="caption">No uploads to display.</div>';
         container.appendChild(msg);
       } else {
-        uploads.forEach((u,i) => {
+        data.forEach((u, i) => {
           const slide = document.createElement('div');
-          slide.className = 'slide' + (i===0 ? ' active' : '');
+          slide.className = 'slide' + (i === 0 ? ' active' : '');
           slide.dataset.index = i;
 
           const img = document.createElement('img');
-          img.src = u.data;
-          img.alt = `Upload ${i+1}`;
+          img.src = u.url;
+          img.alt = `Upload ${i + 1}`;
           slide.appendChild(img);
 
           const cap = document.createElement('div');
           cap.className = 'caption';
-          cap.textContent = `Upload ${i+1}`;
+          cap.textContent = `Upload ${i + 1}`;
           slide.appendChild(cap);
 
           container.appendChild(slide);
         });
       }
 
+      // 3. Slide navigation
       const slides = Array.from(document.querySelectorAll('.slide'));
       let current = 0;
       function showSlide(n) {
@@ -121,8 +143,8 @@
         slides[current].classList.add('active');
       }
 
-      document.getElementById('prev-slide').onclick = () => showSlide(current-1);
-      document.getElementById('next-slide').onclick = () => showSlide(current+1);
+      document.getElementById('prev-slide').onclick = () => showSlide(current - 1);
+      document.getElementById('next-slide').onclick = () => showSlide(current + 1);
       document.getElementById('close-gallery').onclick = e => {
         e.preventDefault();
         window.location.href = 'index.html';
@@ -132,10 +154,11 @@
       };
       document.addEventListener('keydown', e => {
         if (e.key === 'Escape') window.location.href = 'index.html';
-        if (e.key === 'ArrowLeft') showSlide(current-1);
-        if (e.key === 'ArrowRight') showSlide(current+1);
+        if (e.key === 'ArrowLeft') showSlide(current - 1);
+        if (e.key === 'ArrowRight') showSlide(current + 1);
       });
     });
+
   </script>
 </body>
 </html>

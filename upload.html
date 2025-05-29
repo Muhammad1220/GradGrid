@@ -245,6 +245,14 @@
   </main>
 
   <script src="https://unpkg.com/cropperjs@1.5.13/dist/cropper.min.js"></script>
+  <!-- 1. Load Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <!-- 2. Init Supabase client -->
+  <script>
+    const SUPABASE_URL      = 'https://ljvfdbrxelmqyufxifsg.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqdmZkYnJ4ZWxtcXl1ZnhpZnNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg1NDYwMTcsImV4cCI6MjA2NDEyMjAxN30.vXd5WBBpJgsPeTQRZRcWOzbKJ0uQULyrCPiMlfyKr6A';
+    window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  </script>
   <script>
     // helper to show non-blocking in-page toasts
     function showToast(message, type) {
@@ -529,44 +537,97 @@
       zoomInTxt.onclick       =()=>{tSize=Math.round(tSize*1.1);updateTextLive()};
       zoomOutTxt.onclick      =()=>{tSize=Math.round(tSize*0.9);updateTextLive()};
 
-      // Submit
-      uploadForm.addEventListener('submit',e=>{
+      // Submit → upload to Supabase Storage + insert into uploads table
+      uploadForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const type=document.querySelector('input[name="type"]:checked').value;
-        const link=document.getElementById('link-input').value.trim();
-        if(link&&!/^https?:\/\//.test(link)){
+        const type = document.querySelector('input[name="type"]:checked').value;
+        const link = document.getElementById('link-input').value.trim();
+        if (link && !/^https?:\/\//.test(link)) {
           return alert('Please include http:// or https://');
         }
-        function finish(dataURL){
-          const key='gradgrid-uploads';
-          const arr=JSON.parse(localStorage.getItem(key)||'[]');
-          arr.push({
-            minR:reservation.minR,
-            maxR:reservation.maxR,
-            minC:reservation.minC,
-            maxC:reservation.maxC,
-            type,data:dataURL,link
-          });
-          localStorage.setItem(key,JSON.stringify(arr));
-          alert('Upload successful! Redirecting…');
-          window.location.href='final.html';
-        }
-        if(type==='image'){
-          if(originalType==='image/gif'){
-            const gifImg=finalPreview.querySelector('.gif-crop-container img');
-            return gifImg?finish(gifImg.src):alert('Something went wrong with your GIF.');
+
+        // 1. Prepare Blob + extension + optional text content
+        let blob, extension, textContent = null;
+        if (type === 'image') {
+          if (originalType === 'image/gif') {
+            // GIF: grab the cropped <img> src and fetch as blob
+            const gifImg = finalPreview.querySelector('.gif-crop-container img');
+            if (!gifImg) return alert('Something went wrong with your GIF.');
+            blob = await fetch(gifImg.src).then(res => res.blob());
+            extension = 'gif';
+          } else {
+            if (!cropper) return alert('Please select & adjust an image.');
+            blob = await new Promise(resolve => cropper.getCroppedCanvas().toBlob(resolve));
+            extension = originalType.split('/')[1]; // e.g. "png" or "jpeg"
           }
-          if(!cropper) return alert('Please select & adjust an image.');
-          cropper.getCroppedCanvas().toBlob(blob=>{
-            const r=new FileReader();
-            r.onload=()=>finish(r.result);
-            r.readAsDataURL(blob);
-          });
         } else {
-          const lastImg=finalPreview.querySelector('img:not(.gif-crop-container img)');
-          return lastImg?finish(lastImg.src):alert('Please enter and preview your text.');
+          // Text: draw your preview canvas to a blob
+          const txt = textInput.value.trim();
+          if (!txt) return alert('Please enter and preview your text.');
+          textContent = txt;
+          const canvas = document.createElement('canvas');
+          const H = 200, W = Math.round(H * window.plotRatio);
+          canvas.width = W; canvas.height = H;
+          const ctx = canvas.getContext('2d');
+          // draw highlight & text (reuse your updateTextLive logic)
+          ctx.fillStyle = tHighlight; ctx.fillRect(0, 0, W, H);
+          ctx.fillStyle = tColor;
+          ctx.font = `${tItalic?'italic ':''}${tBold?'bold ':''}${tSize}px ${tFont}`;
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          const lines = txt.split('\n'),
+                lh = tSize * 1.2,
+                startY = (H - lines.length * lh) / 2 + lh / 2;
+          lines.forEach((l, i) => {
+            const y = startY + i * lh;
+            ctx.fillText(l, W / 2, y);
+            if (tUnder) {
+              const m = ctx.measureText(l).width,
+                    uy = y + tSize / 2;
+              ctx.beginPath();
+              ctx.moveTo(W/2 - m/2, uy);
+              ctx.lineTo(W/2 + m/2, uy);
+              ctx.lineWidth = 2; ctx.strokeStyle = tColor; ctx.stroke();
+            }
+          });
+          blob = await new Promise(resolve => canvas.toBlob(resolve));
+          extension = 'png';
         }
+
+        // 2. Upload blob to Supabase Storage
+        const fileName = `upload-${Date.now()}.${extension}`;
+        const { error: upErr } = await supabase
+          .storage
+          .from('uploads')
+          .upload(fileName, blob, { contentType: blob.type });
+        if (upErr) return alert('Storage upload error: ' + upErr.message);
+
+        // 3. Get the public URL
+        const { data: { publicUrl }, error: urlErr } = await supabase
+          .storage
+          .from('uploads')
+          .getPublicUrl(fileName);
+        if (urlErr) return alert('URL fetch error: ' + urlErr.message);
+
+        // 4. Insert a row into your uploads table
+        const { error: dbErr } = await supabase
+          .from('uploads')
+          .insert([{
+            url:     publicUrl,
+            type:    type,
+            content: textContent,
+            minR:    reservation.minR,
+            maxR:    reservation.maxR,
+            minC:    reservation.minC,
+            maxC:    reservation.maxC,
+            link:    link || null
+          }]);
+        if (dbErr) return alert('Database insert error: ' + dbErr.message);
+
+        // 5. Success!
+        alert('Upload successful! Redirecting…');
+        window.location.href = 'final.html';
       });
+
     });
   </script>
 

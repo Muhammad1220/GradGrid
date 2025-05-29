@@ -355,6 +355,15 @@
   <!-- URL Tooltip -->
   <div id="link-tooltip"></div>
 
+  <!-- 1. Load Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <!-- 2. Init Supabase client -->
+  <script>
+    const SUPABASE_URL      = 'https://ljvfdbrxelmqyufxifsg.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.…Kr6A';
+    window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  </script>
+
   <script>
     // —— Config & State —— 
     const GRID_COLS = 20, GRID_ROWS = 30, TOTAL = GRID_COLS * GRID_ROWS;
@@ -379,7 +388,7 @@
     const idxToRC = i => ({ row: Math.floor(i/GRID_COLS), col: i % GRID_COLS });
     const cellIndex = el => cells.indexOf(el);
     const getReserved = () => JSON.parse(localStorage.getItem('gradgrid-reserved') || '[]');
-    const getUploads  = () => JSON.parse(localStorage.getItem('gradgrid-uploads')  || '[]');
+    const getUploads = () => window.cloudUploads || JSON.parse(localStorage.getItem('gradgrid-uploads') || '[]');
 
     // —— Render grid & uploads —— 
     function renderGrid() {
@@ -420,7 +429,7 @@
           }
 
           const img = document.createElement('img');
-          img.src = u.data;
+          img.src = u.url;
           container.appendChild(img);
           canvas.appendChild(container);
         });
@@ -596,11 +605,25 @@
       if (refreshInterval) clearInterval(refreshInterval);
     });
 
-    // —— Init & auto-refresh —— 
-    window.addEventListener('DOMContentLoaded', () => {
+    // —— Init: fetch uploads & auto-refresh —— 
+    window.addEventListener('DOMContentLoaded', async () => {
+      // 1. Fetch all uploads from Supabase
+      const { data: uploads, error } = await supabase
+        .from('uploads')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) {
+        console.error('Error loading uploads:', error);
+      } else {
+        // Overwrite localStorage-backed uploads with cloud data
+        window.cloudUploads = uploads;
+      }
+
+      // 2. First render & periodic refresh
       renderGrid();
       refreshInterval = setInterval(renderGrid, 5000);
     });
+
 
     // —— Gallery logic —— 
     const galleryBtn     = document.getElementById('gallery-btn');
@@ -625,7 +648,7 @@
           slide.className = 'gallery-slide' + (i === 0 ? ' active' : '');
           slide.dataset.index = i;
           const img = document.createElement('img');
-          img.src = u.data;
+          img.src = u.url;
           img.alt = `Upload ${i + 1}`;
           slide.appendChild(img);
           const cap = document.createElement('div');
