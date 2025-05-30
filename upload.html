@@ -627,14 +627,14 @@
         const { error: dbErr } = await supabase
           .from('uploads')
           .insert([{
-            url:     publicUrl,
-            type:    type,
-            content: textContent,
-            minR:    reservation.minR,
-            maxR:    reservation.maxR,
-            minC:    reservation.minC,
-            maxC:    reservation.maxC,
-            link:    link || null
+            url:      publicUrl,
+            type:     type,
+            content:  textContent,
+            min_r:    reservation.minR,
+            max_r:    reservation.maxR,
+            min_c:    reservation.minC,
+            max_c:    reservation.maxC,
+            link:     link || null
           }]);
         if (dbErr) return alert('Database insert error: ' + dbErr.message);
 
