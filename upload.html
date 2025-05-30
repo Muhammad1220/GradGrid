@@ -595,18 +595,33 @@
 
         // 2. Upload blob to Supabase Storage
         const fileName = `upload-${Date.now()}.${extension}`;
-        const { error: upErr } = await supabase
+        const { data: storageResult, error: upErr } = await supabase
           .storage
           .from('uploads')
-          .upload(fileName, blob, { contentType: blob.type });
-        if (upErr) return alert('Storage upload error: ' + upErr.message);
+          .upload(
+            `public/${fileName}`,
+            blob,
+            {
+              cacheControl: '3600',
+              upsert:      false,
+              contentType: blob.type
+            }
+          );
+        if (upErr) {
+          alert('Storage upload error: ' + upErr.message);
+          return;
+        }
 
         // 3. Get the public URL
         const { data: { publicUrl }, error: urlErr } = await supabase
           .storage
           .from('uploads')
-          .getPublicUrl(fileName);
-        if (urlErr) return alert('URL fetch error: ' + urlErr.message);
+          .getPublicUrl(storageResult.Key);
+        if (urlErr) {
+          alert('URL fetch error: ' + urlErr.message);
+          return;
+        }
+
 
         // 4. Insert a row into your uploads table
         const { error: dbErr } = await supabase
