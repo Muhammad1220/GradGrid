@@ -408,10 +408,10 @@
             container = document.createElement('div');
           }
           container.className = 'canvas-upload';
-          container.style.gridRowStart    = u.minR + 1;
-          container.style.gridRowEnd      = u.maxR + 2;
-          container.style.gridColumnStart = u.minC + 1;
-          container.style.gridColumnEnd   = u.maxC + 2;
+          container.style.gridRowStart    = u.min_r + 1;
+          container.style.gridRowEnd      = u.max_r + 2;
+          container.style.gridColumnStart = u.min_c + 1;
+          container.style.gridColumnEnd   = u.max_c + 2;
 
           // Tooltip handlers for links
           if (u.link) {
@@ -439,8 +439,8 @@
         const used = new Set();
         getReserved().forEach(rc => used.add(rc.r * GRID_COLS + rc.c));
         getUploads().forEach(u => {
-          for (let r = u.minR; r <= u.maxR; r++)
-            for (let c = u.minC; c <= u.maxC; c++)
+          for (let r = u.min_r; r <= u.max_r; r++)
+            for (let c = u.min_c; c <= u.max_c; c++)
               used.add(r * GRID_COLS + c);
         });
         cells.forEach((c,i) => {
@@ -452,8 +452,8 @@
       const allUsed = new Set();
       getReserved().forEach(rc => allUsed.add(rc.r * GRID_COLS + rc.c));
       getUploads().forEach(u => {
-        for (let r = u.minR; r <= u.maxR; r++)
-          for (let c = u.minC; c <= u.maxC; c++)
+        for (let r = u.min_r; r <= u.max_r; r++)
+          for (let c = u.min_c; c <= u.max_c; c++)
             allUsed.add(r * GRID_COLS + c);
       });
       document.getElementById('sold-count').textContent  = allUsed.size;

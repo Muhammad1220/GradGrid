@@ -116,23 +116,40 @@
         container.appendChild(msg);
       } else {
         data.forEach((u, i) => {
-          const slide = document.createElement('div');
+          // create slide element (either <a> or <div>)
+          const slide = u.link
+            ? document.createElement('a')
+            : document.createElement('div');
+
+          // common slide setup
           slide.className = 'slide' + (i === 0 ? ' active' : '');
           slide.dataset.index = i;
 
+          // if link, add its attributes
+          if (u.link) {
+            slide.href   = u.link;
+            slide.target = '_blank';
+            slide.rel    = 'noopener noreferrer';
+          }
+
+          // image
           const img = document.createElement('img');
           img.src = u.url;
-          img.alt = `Upload ${i + 1}`;
+          img.alt = u.content || `Upload ${i + 1}`;
           slide.appendChild(img);
 
-          const cap = document.createElement('div');
-          cap.className = 'caption';
-          cap.textContent = `Upload ${i + 1}`;
-          slide.appendChild(cap);
+          // optional text caption
+          if (u.content) {
+            const cap = document.createElement('div');
+            cap.className = 'caption';
+            cap.textContent = u.content;
+            slide.appendChild(cap);
+          }
 
           container.appendChild(slide);
         });
       }
+
 
       // 3. Slide navigation
       const slides = Array.from(document.querySelectorAll('.slide'));
