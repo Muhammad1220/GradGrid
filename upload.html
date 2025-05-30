@@ -158,6 +158,8 @@
   </style>
 </head>
 <body>
+  <!-- Toasts will appear here -->
+  <div id="toast-container" style="position:fixed; top:1rem; right:1rem; z-index:1000;"></div>
   <a href="payment.html">Back to Payment</a>
 
   <nav class="navbar">
@@ -593,9 +595,10 @@
           extension = 'png';
         }
 
+
         // 2. Upload blob to Supabase Storage
         const fileName = `upload-${Date.now()}.${extension}`;
-        const { data: storageResult, error: upErr } = await supabase
+        const { data: storageData, error: upErr } = await supabase
           .storage
           .from('uploads')
           .upload(
@@ -613,15 +616,15 @@
         }
 
         // 3. Get the public URL
-        const { data: { publicUrl }, error: urlErr } = await supabase
+        const filePath = storageData.path;
+        const { data: { publicUrl }, error: urlErr } = supabase
           .storage
           .from('uploads')
-          .getPublicUrl(storageResult.Key);
+          .getPublicUrl(filePath);
         if (urlErr) {
           alert('URL fetch error: ' + urlErr.message);
           return;
         }
-
 
         // 4. Insert a row into your uploads table
         const { error: dbErr } = await supabase
