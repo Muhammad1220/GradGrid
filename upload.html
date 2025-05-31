@@ -157,10 +157,19 @@
     }
     .text.preview {
       margin-top: 0.5rem;
-      background: #000; color: #fff;
-      border: 1px solid #ddd; overflow: auto;
-      font-size: 68px; padding: 0.5rem;
-      white-space: pre-wrap; word-break: break-word;
+      background: #000;
+      color: #fff;
+      border: 1px solid #ddd;
+      padding: 0.5rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+
+      /* Fix the preview box at a reasonable height */
+      max-height: 150px;
+      overflow: auto;
+
+      /* Use a relative font-size for readability */
+      font-size: 1rem;
     }
 
     #final-preview {
@@ -513,7 +522,6 @@
         textPreview.style.display='block';
         finalPreview.style.display='block';
         const w=textPreview.clientWidth;
-        textPreview.style.height=(w/window.plotRatio)+'px';
         textPreview.textContent=textInput.value;
         textPreview.style.fontFamily=tFont;
         textPreview.style.fontSize=tSize+'px';
