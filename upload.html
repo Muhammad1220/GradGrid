@@ -159,6 +159,15 @@
     .gif-crop-container {
       overflow: hidden;
     }
+
+    /* Show placeholder text when the contenteditable is empty */
+    #text-editor:empty:before {
+      content: attr(data-placeholder);
+      color: #aaa;
+      pointer-events: none;
+    }
+
+
   </style>
 </head>
 <body>
@@ -208,8 +217,7 @@
           <div id="text-editor"
                class="text-editor"
                contenteditable="true"
-               maxlength="300"
-               placeholder="insert message"></div>
+               data-placeholder="insert message"></div>
         </label>
         <div class="text-controls" id="text-controls" style="display:none;">
           <select id="font-select">
@@ -490,8 +498,21 @@
         };
       });
 
-      // When user types in the contenteditable, show the controls and preview area:
+      // When user types in the contenteditable:
       textEditor.addEventListener('input', () => {
+        // 1) Enforce max 300 chars:
+        if (textEditor.innerText.length > 300) {
+          textEditor.innerText = textEditor.innerText.slice(0, 300);
+          // Move caret to end:
+          const range = document.createRange();
+          range.selectNodeContents(textEditor);
+          range.collapse(false);
+          const sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+
+        // 2) Show formatting controls and preview now that there's text:
         textControls.style.display = 'flex';
         finalPreview.style.display = 'block';
       });
