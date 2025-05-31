@@ -80,11 +80,34 @@
       border-radius: 4px;
     }
 
-    textarea {
-      width: 100%; padding: 0.5rem;
-      border: 1px solid #ccc; border-radius: 4px;
-      height: 100px; resize: vertical; font-size: 68px;
+    textarea#text-input {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+
+      /* keep a fixed starting height */
+      height: 100px;
+
+      /* allow manual vertical resize, but don’t auto-stretch */
+      resize: vertical;
+
+      /* switch to a normal, relative font size */
+      font-size: 1rem;
+
+      /* prevent the box from growing without bound—show scrollbar past 300px */
+      max-height: 300px;
+      overflow: auto;
     }
+
+    /* In case some other generic “textarea {…}” rule remains, force our values */
+    textarea {
+      font-size: 1rem !important;
+      height: 100px !important;
+      max-height: 300px !important;
+      overflow: auto !important;
+    }
+
     button {
       padding: 0.75rem; background: var(--duck);
       color: var(--white); border: none;
