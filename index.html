@@ -268,6 +268,13 @@
       color: var(--white);
       font-size: 1rem;
     }
+
+    /* **NEW** styling for uploader’s name */
+    .gallery-uploader-name {
+      font-size: 0.9rem;
+      color: #ccc;
+      margin-bottom: 0.5rem;
+    }
     .gallery-arrow,
     .gallery-close {
       position: absolute;
@@ -651,6 +658,18 @@
           img.src = u.url;
           img.alt = `Upload ${i + 1}`;
           slide.appendChild(img);
+
+          // **NEW**: Show uploader’s name
+          if (u.uploader_name) {
+            const nameEl = document.createElement('div');
+            nameEl.className = 'gallery-uploader-name';
+            nameEl.textContent = `By: ${u.uploader_name}`;
+            nameEl.style.fontSize    = '0.9rem';
+            nameEl.style.color       = '#ccc';
+            nameEl.style.marginBottom = '0.5rem';
+            slide.appendChild(nameEl);
+          }
+
           const cap = document.createElement('div');
           cap.className = 'gallery-caption';
           cap.textContent = `Upload ${i + 1}`;

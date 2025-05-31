@@ -191,6 +191,13 @@
         </label>
       </div>
 
+      <!-- **NEW: “Your Name” field** -->
+      <label>
+        Your Name:
+        <input type="text" id="uploader-name-input"
+               placeholder="Your Name" required>
+      </label>
+
       <div id="image-group">
         <label>
           Choose PNG/GIF/JPG (max 3 MB):
@@ -229,7 +236,6 @@
 
       <button type="submit">Submit</button>
     </form>
-
     <div class="preview" id="preview">
       <div class="crop-container" id="crop-container" style="display:none;">
         <img id="crop-target" alt="Crop target">
@@ -548,6 +554,12 @@
           return alert('Please include http:// or https://');
         }
 
+        // **NEW: Fetch “Name” field**
+        const uploaderName = document.getElementById('uploader-name-input').value.trim();
+        if (!uploaderName) {
+          return alert('Please enter your name.');
+        }
+
         // 1. Prepare Blob + extension + optional text content
         let blob, extension, textContent = null;
         if (type === 'image') {
@@ -626,23 +638,21 @@
           return;
         }
 
-        // 4. Insert a row into your uploads table
+        // 4. Insert a row into your uploads table, including uploader_name
         const { error: dbErr } = await supabase
           .from('uploads')
           .insert([{
-            url:      publicUrl,
-            type:     type,
-            content:  textContent,
-            min_r:    reservation.minR,
-            max_r:    reservation.maxR,
-            min_c:    reservation.minC,
-            max_c:    reservation.maxC,
-            link:     link || null
+            url:            publicUrl,
+            type:           type,
+            content:        textContent,
+            min_r:          reservation.minR,
+            max_r:          reservation.maxR,
+            min_c:          reservation.minC,
+            max_c:          reservation.maxC,
+            link:           link || null,
+            uploader_name:  uploaderName       // <-- NEW
           }]);
         if (dbErr) return alert('Database insert error: ' + dbErr.message);
-
-
-
         // 5. Success!
         alert('Upload successful! Redirecting…');
         window.location.href = 'final.html';
