@@ -83,7 +83,7 @@
     textarea {
       width: 100%; padding: 0.5rem;
       border: 1px solid #ccc; border-radius: 4px;
-      height: 100px; resize: vertical; font-size: 68px;
+      height: 100px; resize: vertical; font-size: 1rem;
     }
     button {
       padding: 0.75rem; background: var(--duck);
@@ -204,25 +204,25 @@
           <textarea id="text-input"
                     maxlength="300"
                     placeholder="Your message…"></textarea>
+          <div class="text-controls" id="text-controls" style="display:none;">
+            <select id="font-select">
+              <option>Arial</option><option>Helvetica</option>
+              <option>Times New Roman</option><option>Georgia</option>
+              <option>Verdana</option><option>Tahoma</option>
+              <option>Trebuchet MS</option><option>Courier New</option>
+              <option>Lucida Console</option><option>Impact</option>
+            </select>
+            <input type="color" id="text-color-picker"
+                   value="#ffffff" title="Text Color">
+            <input type="color" id="highlight-color-picker"
+                   value="#000000" title="Highlight Color">
+            <button type="button" id="bold-btn"><b>B</b></button>
+            <button type="button" id="italic-btn"><i>I</i></button>
+            <button type="button" id="underline-btn"><u>U</u></button>
+            <button type="button" id="text-zoom-in">+</button>
+            <button type="button" id="text-zoom-out">–</button>
+          </div>
         </label>
-        <div class="text-controls" id="text-controls" style="display:none;">
-          <select id="font-select">
-            <option>Arial</option><option>Helvetica</option>
-            <option>Times New Roman</option><option>Georgia</option>
-            <option>Verdana</option><option>Tahoma</option>
-            <option>Trebuchet MS</option><option>Courier New</option>
-            <option>Lucida Console</option><option>Impact</option>
-          </select>
-          <input type="color" id="text-color-picker"
-                 value="#ffffff" title="Text Color">
-          <input type="color" id="highlight-color-picker"
-                 value="#000000" title="Highlight Color">
-          <button type="button" id="bold-btn"><b>B</b></button>
-          <button type="button" id="italic-btn"><i>I</i></button>
-          <button type="button" id="underline-btn"><u>U</u></button>
-          <button type="button" id="text-zoom-in">+</button>
-          <button type="button" id="text-zoom-out">–</button>
-        </div>
         <div class="text preview" id="text-preview" style="display:none;"></div>
       </div>
 
