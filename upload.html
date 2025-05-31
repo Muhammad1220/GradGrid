@@ -80,10 +80,19 @@
       border-radius: 4px;
     }
 
-    textarea {
-      width: 100%; padding: 0.5rem;
-      border: 1px solid #ccc; border-radius: 4px;
-      height: 100px; resize: vertical; font-size: 1rem;
+    /* Replace the old textarea with a contenteditable “text-editor” */
+    .text-editor {
+      width: 100%; 
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      height: 100px;            /* fixed height */
+      resize: vertical;
+      font-size: 1rem;          /* relative font-size */
+      overflow-y: auto;         /* scroll if content overflows */
+      background: #fff;         /* white background */
+      color: var(--navy);       /* match body text color */
+      caret-color: var(--duck); /* cursor color for editing */
     }
     button {
       padding: 0.75rem; background: var(--duck);
@@ -132,13 +141,8 @@
       background: var(--duck);
       border-color: var(--duck);
     }
-    .text.preview {
-      margin-top: 0.5rem;
-      background: #000; color: #fff;
-      border: 1px solid #ddd; overflow: auto;
-      font-size: 68px; padding: 0.5rem;
-      white-space: pre-wrap; word-break: break-word;
-    }
+    /* We no longer need a separate preview pane; inline editing shows formatting */
+    /* (Delete the entire .text.preview block—no replacement needed.) */
 
     #final-preview {
       position: relative;
@@ -184,7 +188,7 @@
         <label>
           Optional link (where clicking your plot should go):
           <input type="url" id="link-input"
-                 placeholder="https://example.com"
+                 placeholder="https://www.instagram.com"
                  pattern="https?://.+"
                  title="Include http:// or https://">
         </label>
@@ -201,29 +205,30 @@
       <div id="text-group" style="display:none;">
         <label>
           Enter text (max 300 chars):
-          <textarea id="text-input"
-                    maxlength="300"
-                    placeholder="Your message…"></textarea>
-          <div class="text-controls" id="text-controls" style="display:none;">
-            <select id="font-select">
-              <option>Arial</option><option>Helvetica</option>
-              <option>Times New Roman</option><option>Georgia</option>
-              <option>Verdana</option><option>Tahoma</option>
-              <option>Trebuchet MS</option><option>Courier New</option>
-              <option>Lucida Console</option><option>Impact</option>
-            </select>
-            <input type="color" id="text-color-picker"
-                   value="#ffffff" title="Text Color">
-            <input type="color" id="highlight-color-picker"
-                   value="#000000" title="Highlight Color">
-            <button type="button" id="bold-btn"><b>B</b></button>
-            <button type="button" id="italic-btn"><i>I</i></button>
-            <button type="button" id="underline-btn"><u>U</u></button>
-            <button type="button" id="text-zoom-in">+</button>
-            <button type="button" id="text-zoom-out">–</button>
-          </div>
+          <div id="text-editor"
+               class="text-editor"
+               contenteditable="true"
+               maxlength="300"
+               placeholder="insert message"></div>
         </label>
-        <div class="text preview" id="text-preview" style="display:none;"></div>
+        <div class="text-controls" id="text-controls" style="display:none;">
+          <select id="font-select">
+            <option>Arial</option><option>Helvetica</option>
+            <option>Times New Roman</option><option>Georgia</option>
+            <option>Verdana</option><option>Tahoma</option>
+            <option>Trebuchet MS</option><option>Courier New</option>
+            <option>Lucida Console</option><option>Impact</option>
+          </select>
+          <input type="color" id="text-color-picker"
+                 value="#ffffff" title="Text Color">
+          <input type="color" id="highlight-color-picker"
+                 value="#000000" title="Highlight Color">
+          <button type="button" id="bold-btn"><b>B</b></button>
+          <button type="button" id="italic-btn"><i>I</i></button>
+          <button type="button" id="underline-btn"><u>U</u></button>
+          <button type="button" id="text-zoom-in">+</button>
+          <button type="button" id="text-zoom-out">–</button>
+        </div>
       </div>
 
       <button type="submit">Submit</button>
@@ -285,9 +290,8 @@
       const cropControls  = document.getElementById('crop-controls');
       const finalPreview  = document.getElementById('final-preview');
       const imageInput    = document.getElementById('image-input');
-      const textInput     = document.getElementById('text-input');
+      const textEditor    = document.getElementById('text-editor');
       const textControls  = document.getElementById('text-controls');
-      const textPreview   = document.getElementById('text-preview');
       const fontSelect    = document.getElementById('font-select');
       const colorPicker   = document.getElementById('text-color-picker');
       const highlightPicker = document.getElementById('highlight-color-picker');
@@ -298,8 +302,10 @@
       const zoomOutTxt    = document.getElementById('text-zoom-out');
       let cropper         = null;
       let originalType    = '';
+      /* We will use document.execCommand() on the contenteditable div.
+         Keep tFont, tSize, tBold, etc., for the canvas-generation step. */
       let tFont   = 'Arial',
-          tSize   = 68,
+          tSize   = 16,       // start with 16px; user can zoom in/out
           tBold   = false,
           tItalic = false,
           tUnder  = false,
@@ -367,10 +373,10 @@
           finalPreview.style.display = 'none';
 
           // Reset text mode
-          textInput.value = '';
+          textEditor.innerText = '';
           textControls.style.display = 'none';
-          textPreview.style.display = 'none';
-          tFont = 'Arial'; tSize = 68; tBold = false; tItalic = false; tUnder = false;
+          // (no textPreview to hide)
+          tFont = 'Arial'; tSize = 16; tBold = false; tItalic = false; tUnder = false;
           tColor = '#ffffff'; tHighlight = '#000000';
           boldBtn.classList.remove('active');
           italicBtn.classList.remove('active');
@@ -408,7 +414,7 @@
           cropContainer.style.display   = 'none';
           cropControls.style.display    = 'none';
           textControls.style.display    = 'none';
-          textPreview.style.display     = 'none';
+          textEditor.innerText = '';          // clear contenteditable when switching away
           finalPreview.style.display    = 'none';
         });
       });
@@ -484,60 +490,54 @@
         };
       });
 
-      // Text preview
-      function updateTextLive(){
-        textControls.style.display='flex';
-        textPreview.style.display='block';
-        finalPreview.style.display='block';
-        const w=textPreview.clientWidth;
-        textPreview.style.height=(w/window.plotRatio)+'px';
-        textPreview.textContent=textInput.value;
-        textPreview.style.fontFamily=tFont;
-        textPreview.style.fontSize=tSize+'px';
-        textPreview.style.fontWeight=tBold?'700':'400';
-        textPreview.style.fontStyle=tItalic?'italic':'normal';
-        textPreview.style.textDecoration=tUnder?'underline':'none';
-        textPreview.style.color=tColor;
-        textPreview.style.background=tHighlight;
-        const H=200,W=Math.round(H*window.plotRatio),
-              cnv=document.createElement('canvas');
-        cnv.width=W;cnv.height=H;
-        const ctx=cnv.getContext('2d');
-        ctx.fillStyle=tHighlight;ctx.fillRect(0,0,W,H);
-        ctx.fillStyle=tColor;
-        ctx.font=`${tItalic?'italic ':''}${tBold?'bold ':''}${tSize}px ${tFont}`;
-        ctx.textAlign='center';ctx.textBaseline='middle';
-        const lines=textInput.value.split('\n'),
-              lh=tSize*1.2,
-              startY=(H-lines.length*lh)/2+lh/2;
-        lines.forEach((l,i)=>{
-          const y=startY+i*lh;
-          ctx.fillText(l,W/2,y);
-          if(tUnder){
-            const m=ctx.measureText(l).width,
-                  uy=y+tSize/2;
-            ctx.beginPath();
-            ctx.moveTo(W/2-m/2,uy);
-            ctx.lineTo(W/2+m/2,uy);
-            ctx.lineWidth=2;ctx.strokeStyle=tColor;ctx.stroke();
-          }
-        });
-        finalPreview.querySelectorAll(':scope>img:not(.gif-crop-container img)')
-          .forEach(e=>e.remove());
-        const imgEl=document.createElement('img');
-        imgEl.src=cnv.toDataURL();
-        finalPreview.appendChild(imgEl);
-      }
+      // When user types in the contenteditable, show the controls and preview area:
+      textEditor.addEventListener('input', () => {
+        textControls.style.display = 'flex';
+        finalPreview.style.display = 'block';
+      });
 
-      textInput.addEventListener('input',updateTextLive);
-      fontSelect.onchange     =()=>{tFont=fontSelect.value;updateTextLive()};
-      colorPicker.oninput     =()=>{tColor=colorPicker.value;updateTextLive()};
-      highlightPicker.oninput =()=>{tHighlight=highlightPicker.value;updateTextLive()};
-      boldBtn.onclick         =()=>{tBold=!tBold;boldBtn.classList.toggle('active',tBold);updateTextLive()};
-      italicBtn.onclick       =()=>{tItalic=!tItalic;italicBtn.classList.toggle('active',tItalic);updateTextLive()};
-      underlineBtn.onclick    =()=>{tUnder=!tUnder;underlineBtn.classList.toggle('active',tUnder);updateTextLive()};
-      zoomInTxt.onclick       =()=>{tSize=Math.round(tSize*1.1);updateTextLive()};
-      zoomOutTxt.onclick      =()=>{tSize=Math.round(tSize*0.9);updateTextLive()};
+      // Formatting buttons now use execCommand on the contenteditable:
+      fontSelect.onchange = () => {
+        document.execCommand('fontName', false, fontSelect.value);
+      };
+      colorPicker.oninput = () => {
+        document.execCommand('foreColor', false, colorPicker.value);
+      };
+      highlightPicker.oninput = () => {
+        document.execCommand('hiliteColor', false, highlightPicker.value);
+      };
+      boldBtn.onclick = () => {
+        document.execCommand('bold', false, null);
+        boldBtn.classList.toggle('active');
+      };
+      italicBtn.onclick = () => {
+        document.execCommand('italic', false, null);
+        italicBtn.classList.toggle('active');
+      };
+      underlineBtn.onclick = () => {
+        document.execCommand('underline', false, null);
+        underlineBtn.classList.toggle('active');
+      };
+      zoomInTxt.onclick = () => {
+        tSize = Math.min(64, tSize * 1.1); // cap at 64px
+        document.execCommand('fontSize', false, 7); 
+        /* Workaround: execCommand('fontSize',7) sets font-size to largest preset. 
+           Then we override <font size="7"> to our computed px. */
+        const fonts = textEditor.getElementsByTagName('font');
+        Array.from(fonts).forEach(f => {
+          f.removeAttribute('size');
+          f.style.fontSize = tSize + 'px';
+        });
+      };
+      zoomOutTxt.onclick = () => {
+        tSize = Math.max(12, tSize * 0.9); // floor at 12px
+        document.execCommand('fontSize', false, 7);
+        const fonts = textEditor.getElementsByTagName('font');
+        Array.from(fonts).forEach(f => {
+          f.removeAttribute('size');
+          f.style.fontSize = tSize + 'px';
+        });
+      };
 
       // Submit → upload to Supabase Storage + insert into uploads table
       uploadForm.addEventListener('submit', async (e) => {
@@ -564,33 +564,42 @@
           }
         } else {
           // Text: draw your preview canvas to a blob
-          const txt = textInput.value.trim();
-          if (!txt) return alert('Please enter and preview your text.');
+          // Retrieve plain text from the contenteditable, preserving line breaks:
+          const txt = textEditor.innerText.trim();
+          if (!txt) return alert('Please enter and format your text.');
           textContent = txt;
+
+          // Render the text (with styling) onto a hidden <canvas>:
           const canvas = document.createElement('canvas');
           const H = 200, W = Math.round(H * window.plotRatio);
-          canvas.width = W; canvas.height = H;
+          canvas.width = W; 
+          canvas.height = H;
           const ctx = canvas.getContext('2d');
-          // draw highlight & text (reuse your updateTextLive logic)
+          // Fill background with highlight color:
           ctx.fillStyle = tHighlight; ctx.fillRect(0, 0, W, H);
+
+          // We will parse each line and draw it using the current tSize, tFont, tColor, tBold, etc.
+          const lines = txt.split('\n');
           ctx.fillStyle = tColor;
           ctx.font = `${tItalic?'italic ':''}${tBold?'bold ':''}${tSize}px ${tFont}`;
-          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          const lines = txt.split('\n'),
-                lh = tSize * 1.2,
-                startY = (H - lines.length * lh) / 2 + lh / 2;
+          ctx.textAlign = 'center'; 
+          ctx.textBaseline = 'middle';
+
+          const lh = tSize * 1.2;
+          const startY = (H - lines.length * lh) / 2 + lh / 2;
           lines.forEach((l, i) => {
             const y = startY + i * lh;
             ctx.fillText(l, W / 2, y);
             if (tUnder) {
-              const m = ctx.measureText(l).width,
-                    uy = y + tSize / 2;
+              const m = ctx.measureText(l).width;
+              const uy = y + tSize / 2;
               ctx.beginPath();
               ctx.moveTo(W/2 - m/2, uy);
               ctx.lineTo(W/2 + m/2, uy);
               ctx.lineWidth = 2; ctx.strokeStyle = tColor; ctx.stroke();
             }
           });
+
           blob = await new Promise(resolve => canvas.toBlob(resolve));
           extension = 'png';
         }
