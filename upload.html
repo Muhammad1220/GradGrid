@@ -200,9 +200,23 @@
 
       <div id="image-group">
         <label>
-          Choose PNG/GIF/JPG (max 3 MB):
-          <input type="file" id="image-input"
-                 accept="image/png,image/gif,image/jpeg">
+          Take a Photo:
+          <input
+            type="file"
+            id="camera-input"
+            accept="image/*"
+            capture="environment"
+            style="display: block; margin-top: 0.5rem;"
+          >
+        </label>
+        <label style="margin-top: 1rem;">
+          Or choose existing image:
+          <input
+            type="file"
+            id="image-input"
+            accept="image/png,image/gif,image/jpeg"
+            style="display: block; margin-top: 0.5rem;"
+          >
         </label>
       </div>
 
@@ -292,6 +306,7 @@
       const cropControls  = document.getElementById('crop-controls');
       const finalPreview  = document.getElementById('final-preview');
       const imageInput    = document.getElementById('image-input');
+      const cameraInput   = document.getElementById('camera-input');
       const textInput     = document.getElementById('text-input');
       const textControls  = document.getElementById('text-controls');
       const textPreview   = document.getElementById('text-preview');
@@ -420,36 +435,44 @@
         });
       });
 
-      // Image upload
-      imageInput.addEventListener('change', ()=>{
-        const file = imageInput.files[0];
+      // Handle both camera + gallery inputs
+      function handleFileSelection(file) {
         if (!file) return;
-        if (file.size > 3*1024*1024) return showToast('File exceeds 3 MB', 'error');
+        if (file.size > 3 * 1024 * 1024) {
+          return showToast('File exceeds 3 MB', 'error');
+        }
         originalType = file.type;
         const reader = new FileReader();
-        reader.onload = ()=>{
-          finalPreview.querySelectorAll(':scope>:not(h3)').forEach(el=>el.remove());
-          finalPreview.style.display='block';
+        reader.onload = () => {
+          finalPreview.querySelectorAll(':scope > :not(h3)').forEach(el => el.remove());
+          finalPreview.style.display = 'block';
           const img = document.getElementById('crop-target');
           img.src = reader.result;
           cropContainer.style.display = 'block';
           cropControls.style.display = 'flex';
           if (cropper) cropper.destroy();
           cropper = new Cropper(img, {
-            aspectRatio: originalType==='image/gif'?NaN:window.plotRatio,
+            aspectRatio: originalType === 'image/gif' ? NaN : window.plotRatio,
             viewMode: 1,
             autoCropArea: 1,
             dragMode: 'none',
-            rotatable: originalType!=='image/gif',
+            rotatable: originalType !== 'image/gif',
             background: false,
-            ready() { updateImgPreview() },
-            crop()  { updateImgPreview() }
+            ready() { updateImgPreview(); },
+            crop()  { updateImgPreview(); }
           });
         };
-        reader.onerror = ()=>{
+        reader.onerror = () => {
           alert('Oops—couldn’t read that file. Try a different image.');
         };
         reader.readAsDataURL(file);
+      }
+
+      imageInput.addEventListener('change', () => {
+        handleFileSelection(imageInput.files[0]);
+      });
+      cameraInput.addEventListener('change', () => {
+        handleFileSelection(cameraInput.files[0]);
       });
 
 
