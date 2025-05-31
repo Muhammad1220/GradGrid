@@ -80,34 +80,11 @@
       border-radius: 4px;
     }
 
-    textarea#text-input {
-      width: 100%;
-      padding: 0.5rem;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-
-      /* keep a fixed starting height */
-      height: 100px;
-
-      /* allow manual vertical resize, but don’t auto-stretch */
-      resize: vertical;
-
-      /* switch to a normal, relative font size */
-      font-size: 1rem;
-
-      /* prevent the box from growing without bound—show scrollbar past 300px */
-      max-height: 300px;
-      overflow: auto;
-    }
-
-    /* In case some other generic “textarea {…}” rule remains, force our values */
     textarea {
-      font-size: 1rem !important;
-      height: 100px !important;
-      max-height: 300px !important;
-      overflow: auto !important;
+      width: 100%; padding: 0.5rem;
+      border: 1px solid #ccc; border-radius: 4px;
+      height: 100px; resize: vertical; font-size: 68px;
     }
-
     button {
       padding: 0.75rem; background: var(--duck);
       color: var(--white); border: none;
@@ -157,19 +134,10 @@
     }
     .text.preview {
       margin-top: 0.5rem;
-      background: #000;
-      color: #fff;
-      border: 1px solid #ddd;
-      padding: 0.5rem;
-      white-space: pre-wrap;
-      word-break: break-word;
-
-      /* Fix the preview box at a reasonable height */
-      max-height: 150px;
-      overflow: auto;
-
-      /* Use a relative font-size for readability */
-      font-size: 1rem;
+      background: #000; color: #fff;
+      border: 1px solid #ddd; overflow: auto;
+      font-size: 68px; padding: 0.5rem;
+      white-space: pre-wrap; word-break: break-word;
     }
 
     #final-preview {
@@ -522,6 +490,7 @@
         textPreview.style.display='block';
         finalPreview.style.display='block';
         const w=textPreview.clientWidth;
+        textPreview.style.height=(w/window.plotRatio)+'px';
         textPreview.textContent=textInput.value;
         textPreview.style.fontFamily=tFont;
         textPreview.style.fontSize=tSize+'px';
