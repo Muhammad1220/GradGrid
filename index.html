@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>GradGrid 2025</title>
   <style>
     /* -- Prevent any scrolling, ensure full-page fit -- */
@@ -159,6 +159,8 @@
       border: 1px solid var(--white);
       background: transparent;
       aspect-ratio: 1;
+      min-width: 2rem;
+      min-height: 2rem;
     }
     .canvas-cell.reserved {
       background: var(--red) !important;
@@ -573,8 +575,9 @@
       window.location.href = 'payment.html';
     };
 
-    // —— Drag-to-select —— 
+    // —— Drag-to-select (mouse + touch) —— 
     cells.forEach(cell => {
+      // Mouse down handler
       cell.addEventListener('mousedown', () => {
         if (!isSelecting || cell.classList.contains('reserved')) return;
         isMouseDown = true;
@@ -583,12 +586,35 @@
         clearSelection();
         selBar.style.display = 'none';
       });
+      // Touch start handler (for taps/initial touch)
+      cell.addEventListener('touchstart', (evt) => {
+        evt.preventDefault();
+        if (!isSelecting || cell.classList.contains('reserved')) return;
+        isMouseDown = true;
+        startCell = cell;
+        endCell = null;
+        clearSelection();
+        selBar.style.display = 'none';
+      });
+      // Mouseover (drag select)
       cell.addEventListener('mouseover', () => {
         if (isSelecting && isMouseDown && !cell.classList.contains('reserved')) {
           endCell = cell;
           drawSelection();
         }
       });
+    });
+    // Track finger movement over the grid container
+    canvas.addEventListener('touchmove', (evt) => {
+      if (!isSelecting || !isMouseDown) return;
+      evt.preventDefault();
+      const touch = evt.touches[0];
+      const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
+      if (!targetElement) return;
+      if (targetElement.classList.contains('canvas-cell') && !targetElement.classList.contains('reserved')) {
+        endCell = targetElement;
+        drawSelection();
+      }
     });
     function onRelease() {
       if (isSelecting && isMouseDown) {
