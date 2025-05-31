@@ -109,6 +109,10 @@
         <span id="count-display">0</span>
       </p>
       <p>
+        <strong>Time left:</strong>
+        <span id="timer">15:00</span>
+      </p>
+      <p>
         <strong>Total:</strong>
         $<span id="total-display">0.00</span>
       </p>
@@ -135,34 +139,94 @@
     </form>
   </main>
 
+  <!-- 1. Load Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
-    // 1) Fetch and display how many plots were chosen
-    const count = parseInt(localStorage.getItem('gradgrid-requiredCount') || '1', 10);
-    document.getElementById('count-display').textContent = count;
+    // 2) Init Supabase client
+    const SUPABASE_URL      = 'https://ljvfdbrxelmqyufxifsg.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqdmZkYnJ4ZWxtcXl1ZnhpZnNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg1NDYwMTcsImV4cCI6MjA2NDEyMjAxN30.vXd5WBBpJgsPeTQRZRcWOzbKJ0uQULyrCPiMlfyKr6A';
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // 2) Grab your stored reservation data (which includes price per plot)
-    const reservation = JSON.parse(localStorage.getItem('gradgrid-reservation') || '{}');
-    const pricePerPlot = Number(reservation.price) || 0;
+    // 3) Get or generate our session_id
+    let sessionId = localStorage.getItem('session_id');
+    if (!sessionId) {
+      sessionId = crypto.randomUUID();
+      localStorage.setItem('session_id', sessionId);
+    }
 
-    // 3) Calculate and render the total
-    const total = count * pricePerPlot;
-    document.getElementById('total-display').textContent = total.toFixed(2);
+    // 4) On load, fetch our hold from Supabase
+    let holdRecord;
+    async function fetchHold() {
+      const { data, error } = await supabase
+        .from('holds')
+        .select('*')
+        .eq('session_id', sessionId)
+        .single();
+      if (error || !data) {
+        alert('No active reservation found. Redirecting…');
+        return window.location.href = 'index.html';
+      }
+      holdRecord = data;
+      startCountdown(new Date(data.expires_at));
+      displaySummary();
+    }
 
-    // 4) Handle form submission
-    document.getElementById('pay-form').addEventListener('submit', e => {
+    // 5) Render count & total
+    function displaySummary() {
+      const count = (holdRecord.max_r - holdRecord.min_r + 1)
+                  * (holdRecord.max_c - holdRecord.min_c + 1);
+      document.getElementById('count-display').textContent = count;
+
+      // Use the price from the holdRecord (which should be 5 in your “holds” table)
+      const pricePerPlot = Number(holdRecord.price || 0);
+      document.getElementById('total-display').textContent =
+        (count * pricePerPlot).toFixed(2);
+    }
+
+    // 6) Countdown logic
+    let timerInterval;
+    function startCountdown(expiry) {
+      function tick() {
+        const diff = expiry - new Date();
+        if (diff <= 0) {
+          clearInterval(timerInterval);
+          expireHold();
+          return;
+        }
+        const mins = String(Math.floor(diff/60000)).padStart(2,'0');
+        const secs = String(Math.floor((diff%60000)/1000)).padStart(2,'0');
+        document.getElementById('timer').textContent = `${mins}:${secs}`;
+      }
+      tick();
+      timerInterval = setInterval(tick, 1000);
+    }
+
+    // 7) Auto-release expired hold
+    async function expireHold() {
+      await supabase
+        .from('holds')
+        .delete()
+        .eq('session_id', sessionId);
+      localStorage.removeItem('gradgrid-reserved');
+      localStorage.removeItem('gradgrid-reservation');
+      alert('Your reservation has expired.');
+      window.location.href = 'index.html';
+    }
+
+    // 8) Payment form submission
+    document.getElementById('pay-form').addEventListener('submit', async e => {
       e.preventDefault();
-      // Collect and store payment info (stubbed)
-      const payment = {
-        name:   document.getElementById('card-name').value.trim(),
-        number: document.getElementById('card-number').value.replace(/\s+/g, ''),
-        expiry: document.getElementById('card-expiry').value.trim(),
-        cvc:    document.getElementById('card-cvc').value.trim()
-      };
-      localStorage.setItem('gradgrid-payment', JSON.stringify(payment));
-
-      // Redirect to upload page
+      clearInterval(timerInterval);
+      await supabase
+        .from('holds')
+        .delete()
+        .eq('session_id', sessionId);
       window.location.href = 'upload.html';
     });
+
+    // 9) Kick things off
+    document.addEventListener('DOMContentLoaded', fetchHold);
   </script>
+
 </body>
 </html>

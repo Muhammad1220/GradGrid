@@ -307,7 +307,7 @@
     <div class="info">
       <div>Sold: <strong id="sold-count">0</strong></div>
       <div>Available: <strong id="avail-count">600</strong></div>
-      <div>Price: <strong id="price-count">$0/plot</strong></div>
+      <div>Price: <strong id="price-count"></strong></div>
     </div>
     <div class="menu">
       <a id="home-btn">Home</a>
@@ -365,6 +365,9 @@
   </script>
 
   <script>
+    // —— Set dynamic price in navbar —— 
+    document.getElementById('price-count').textContent = '$5/plot';
+
     // —— Config & State —— 
     const GRID_COLS = 20, GRID_ROWS = 30, TOTAL = GRID_COLS * GRID_ROWS;
     let isSelecting = false, isMouseDown = false, isDragging = false;
@@ -524,9 +527,11 @@
       renderGrid();
     };
 
-    // —— Confirm selection —— 
-    confirmBtn.onclick = () => {
+    // —— Confirm selection & hold in Supabase —— 
+    confirmBtn.onclick = async () => {
       if (confirmBtn.disabled) return;
+
+      // 1. Build cell-range payload
       const existing = getReserved();
       const occupied = new Set(existing.map(rc => rc.r * GRID_COLS + rc.c));
       const i1 = cellIndex(startCell), i2 = cellIndex(endCell);
@@ -534,37 +539,56 @@
       const minR = Math.min(r1,r2), maxR = Math.max(r1,r2);
       const minC = Math.min(c1,c2), maxC = Math.max(c1,c2);
 
-      const newIndices = [];
-      for (let r=minR; r<=maxR; r++)
-        for (let c=minC; c<=maxC; c++)
-          newIndices.push(r * GRID_COLS + c);
-
-      for (const idx of newIndices) {
-        if (occupied.has(idx)) {
-          alert('Sorry—some of those plots were just taken. Please re-select.');
-          startCell = endCell = null;
-          clearSelection(); finalizeSelection(); renderGrid();
-          return;
+      // 2. Check conflicts again
+      for (let r = minR; r <= maxR; r++) {
+        for (let c = minC; c <= maxC; c++) {
+          if (occupied.has(r * GRID_COLS + c)) {
+            alert('Sorry—some of those plots were just taken. Please re-select.');
+            startCell = endCell = null;
+            clearSelection(); finalizeSelection(); renderGrid();
+            return;
+          }
         }
       }
 
+      // 3. Persist locally so reloads survive
       const reserved = existing.slice();
-      newIndices.forEach(idx => {
-        const {row, col} = idxToRC(idx);
-        reserved.push({ r: row, c: col });
-      });
+      reserved.push({ minR, maxR, minC, maxC });
       localStorage.setItem('gradgrid-reserved', JSON.stringify(reserved));
       localStorage.setItem('gradgrid-reservation', JSON.stringify({
         minR, maxR, minC, maxC,
         width:  maxC - minC + 1,
         height: maxR - minR + 1,
         area:   requiredCount,
-        price:  0
+        price:  5
       }));
 
+
+      // 4. Write a 15-minute hold record to Supabase
+      const sessionId = localStorage.getItem('session_id') || crypto.randomUUID();
+      localStorage.setItem('session_id', sessionId);
+      const { error: holdErr } = await supabase
+        .from('holds')
+        .insert([{
+          session_id: sessionId,
+          min_r:      minR,
+          max_r:      maxR,
+          min_c:      minC,
+          max_c:      maxC,
+          price:      5,
+          expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString()
+        }]);
+      if (holdErr) {
+        alert('Could not reserve plots. Please try again.');
+        return;
+      }
+
+
+      // 5. Hide UI and go to payment
       instructions.style.display = 'none';
       window.location.href = 'payment.html';
     };
+
 
     // —— Drag-to-select —— 
     cells.forEach(cell => {
