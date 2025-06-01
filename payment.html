@@ -135,15 +135,6 @@
     </form>
   </main>
 
-  <!-- 1. Load Supabase JS (needed so `supabase` is defined) -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-  <!-- 2. Init Supabase client (use the same URL/anon key you use elsewhere) -->
-  <script>
-    const SUPABASE_URL      = 'https://ljvfdbrxelmqyufxifsg.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqdmZkYnJ4ZWxtcXl1ZnhpZnNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg1NDYwMTcsImV4cCI6MjA2NDEyMjAxN30.vXd5WBBpJgsPeTQRZRcWOzbKJ0uQULyrCPiMlfyKr6A';
-    window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  </script>
-
   <script>
     // 1) Fetch and display how many plots were chosen
     const count = parseInt(localStorage.getItem('gradgrid-requiredCount') || '1', 10);
