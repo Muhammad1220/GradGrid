@@ -661,8 +661,8 @@
           return;
         }
 
-        // 4. Insert a row into your uploads table, including uploader_name
-        const { error: dbErr } = await supabase
+        // 4. Insert a row into your uploads table (paid: false), then capture the new row’s ID
+        const { data: insertedData, error: dbErr } = await supabase
           .from('uploads')
           .insert([{
             url:            publicUrl,
@@ -673,12 +673,16 @@
             min_c:          reservation.minC,
             max_c:          reservation.maxC,
             link:           link || null,
-            uploader_name:  uploaderName       // <-- NEW
-          }]);
+            uploader_name:  uploaderName,
+            paid:           false
+          }])
+          .select('id')
+          .single();
         if (dbErr) return alert('Database insert error: ' + dbErr.message);
+        const uploadId = insertedData.id;
         // 5. Success!
-        alert('Upload successful! Redirecting…');
-        window.location.href = 'final.html';
+        alert('Upload successful! Redirecting to payment…');
+        window.location.href = `payment.html?uploadId=${uploadId}`;
       });
 
     });

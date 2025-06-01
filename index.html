@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>GradGrid 2025</title>
   <style>
     /* -- Prevent any scrolling, ensure full-page fit -- */
@@ -572,7 +572,7 @@
       }));
 
       instructions.style.display = 'none';
-      window.location.href = 'payment.html';
+      window.location.href = 'upload.html';
     };
 
     // —— Drag-to-select (mouse + touch) —— 
@@ -644,6 +644,7 @@
       const { data: uploads, error } = await supabase
         .from('uploads')
         .select('*')
+        .eq('paid', true)
         .order('created_at', { ascending: false });
       if (error) {
         console.error('Error loading uploads:', error);

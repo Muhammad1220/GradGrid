@@ -148,20 +148,37 @@
     const total = count * pricePerPlot;
     document.getElementById('total-display').textContent = total.toFixed(2);
 
-    // 4) Handle form submission
-    document.getElementById('pay-form').addEventListener('submit', e => {
+    // 4) Handle form submission: mark paid=true in Supabase, then go to final.html
+    document.getElementById('pay-form').addEventListener('submit', async (e) => {
       e.preventDefault();
-      // Collect and store payment info (stubbed)
-      const payment = {
-        name:   document.getElementById('card-name').value.trim(),
-        number: document.getElementById('card-number').value.replace(/\s+/g, ''),
-        expiry: document.getElementById('card-expiry').value.trim(),
-        cvc:    document.getElementById('card-cvc').value.trim()
-      };
-      localStorage.setItem('gradgrid-payment', JSON.stringify(payment));
+      // 4a) Parse uploadId from URL
+      const params   = new URLSearchParams(window.location.search);
+      const uploadId = params.get('uploadId');
+      if (!uploadId) {
+        alert('Missing uploadId. Please retry.');
+        return;
+      }
 
-      // Redirect to upload page
-      window.location.href = 'upload.html';
+      // 4b) (Optional) Collect card info if needed; here we assume payment succeeds immediately.
+      const cardName = document.getElementById('card-name').value.trim();
+      if (!cardName) {
+        alert('Please enter cardholder name.');
+        return;
+      }
+
+      // 4c) Update Supabase row: set paid=true
+      const { error: dbErr } = await supabase
+        .from('uploads')
+        .update({ paid: true })
+        .eq('id', uploadId);
+      if (dbErr) {
+        console.error('Error marking paid:', dbErr);
+        alert('Payment failed. Please try again.');
+        return;
+      }
+
+      // 4d) Redirect to final confirmation
+      window.location.href = `final.html?uploadId=${uploadId}`;
     });
   </script>
 </body>
