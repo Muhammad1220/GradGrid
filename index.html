@@ -364,13 +364,19 @@
   <!-- URL Tooltip -->
   <div id="link-tooltip"></div>
 
-  <!-- 1. Load Supabase JS -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-  <!-- 2. Init Supabase client -->
+  <!-- 1. Load Supabase JS (v2 UMD build) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <!-- 2. Initialize Supabase client -->
   <script>
+    // (replace these values with your actual project URL and anon key)
     const SUPABASE_URL      = 'https://ljvfdbrxelmqyufxifsg.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqdmZkYnJ4ZWxtcXl1ZnhpZnNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg1NDYwMTcsImV4cCI6MjA2NDEyMjAxN30.vXd5WBBpJgsPeTQRZRcWOzbKJ0uQULyrCPiMlfyKr6A';
-    window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    try {
+      window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      console.log('Index.html: Supabase initialized.');
+    } catch (err) {
+      console.error('Index.html: Failed to initialize Supabase:', err);
+    }
   </script>
 
   <script>
