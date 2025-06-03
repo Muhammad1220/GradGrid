@@ -581,22 +581,29 @@
       window.location.href = 'upload.html';
     };
 
-    // —— Drag-to-select (mouse + touch) —— 
+    // —— Drag-to-select with movement threshold (mouse + touch) —— 
     cells.forEach(cell => {
       // Mouse down handler
-      cell.addEventListener('mousedown', () => {
+      cell.addEventListener('mousedown', e => {
         if (!isSelecting || cell.classList.contains('reserved')) return;
         isMouseDown = true;
+        isDragging = false;
+        startX = e.clientX;
+        startY = e.clientY;
         startCell = cell;
         endCell = null;
         clearSelection();
         selBar.style.display = 'none';
       });
       // Touch start handler (for taps/initial touch)
-      cell.addEventListener('touchstart', (evt) => {
-        evt.preventDefault();
+      cell.addEventListener('touchstart', e => {
+        e.preventDefault();
         if (!isSelecting || cell.classList.contains('reserved')) return;
+        const touch = e.touches[0];
         isMouseDown = true;
+        isDragging = false;
+        startX = touch.clientX;
+        startY = touch.clientY;
         startCell = cell;
         endCell = null;
         clearSelection();
@@ -604,22 +611,46 @@
       });
       // Mouseover (drag select)
       cell.addEventListener('mouseover', () => {
-        if (isSelecting && isMouseDown && !cell.classList.contains('reserved')) {
+        if (isSelecting && isMouseDown && isDragging && !cell.classList.contains('reserved')) {
           endCell = cell;
           drawSelection();
         }
       });
     });
-    // Track finger movement over the grid container
-    canvas.addEventListener('touchmove', (evt) => {
+    // Track mouse movement for drag threshold
+    canvas.addEventListener('mousemove', e => {
+      if (!isMouseDown) return;
+      const dx = Math.abs(e.clientX - startX);
+      const dy = Math.abs(e.clientY - startY);
+      if (!isDragging && (dx > 5 || dy > 5)) {
+        isDragging = true;
+        if (refreshInterval) clearInterval(refreshInterval);
+      }
+      if (isDragging) {
+        const target = document.elementFromPoint(e.clientX, e.clientY);
+        if (target && target.classList.contains('canvas-cell') && !target.classList.contains('reserved')) {
+          endCell = target;
+          drawSelection();
+        }
+      }
+    });
+    // Track finger movement with threshold
+    canvas.addEventListener('touchmove', e => {
       if (!isSelecting || !isMouseDown) return;
-      evt.preventDefault();
-      const touch = evt.touches[0];
-      const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
-      if (!targetElement) return;
-      if (targetElement.classList.contains('canvas-cell') && !targetElement.classList.contains('reserved')) {
-        endCell = targetElement;
-        drawSelection();
+      const touch = e.touches[0];
+      const dx = Math.abs(touch.clientX - startX);
+      const dy = Math.abs(touch.clientY - startY);
+      if (!isDragging && (dx > 5 || dy > 5)) {
+        isDragging = true;
+        if (refreshInterval) clearInterval(refreshInterval);
+      }
+      if (isDragging) {
+        e.preventDefault();
+        const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
+        if (targetElement && targetElement.classList.contains('canvas-cell') && !targetElement.classList.contains('reserved')) {
+          endCell = targetElement;
+          drawSelection();
+        }
       }
     });
     function onRelease() {
@@ -627,27 +658,15 @@
         isMouseDown = false;
         finalizeSelection();
       }
-      if (isDragging) {
-        isDragging = false;
-        // One final update when drag ends:
-        renderGrid();
-        if (refreshInterval) clearInterval(refreshInterval);
-        // Only refresh when not dragging:
-        refreshInterval = setInterval(() => {
-          if (!isDragging) renderGrid();
-        }, 5000);
-      }
+      // Always do a final refresh on release
+      if (refreshInterval) clearInterval(refreshInterval);
+      renderGrid();
+      // Resume auto-refresh
+      refreshInterval = setInterval(() => {
+        if (!isDragging) renderGrid();
+      }, 5000);
+      isDragging = false;
     }
-    document.addEventListener('mouseup', onRelease);
-    document.addEventListener('touchend', onRelease);
-    canvas.addEventListener('mousedown', () => {
-      isDragging = true;
-      if (refreshInterval) clearInterval(refreshInterval);
-    });
-    canvas.addEventListener('touchstart', () => {
-      isDragging = true;
-      if (refreshInterval) clearInterval(refreshInterval);
-    });
 
     // —— Init: fetch uploads & auto-refresh —— 
     window.addEventListener('DOMContentLoaded', async () => {
