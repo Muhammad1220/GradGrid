@@ -139,23 +139,47 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
   <script>
+    console.log('--- payment.html script starting ---');
+
     // ── 2) Initialize Supabase client ──────────────────────────────────────────────
-    // Replace the placeholders with your exact Supabase URL and anon key:
-    const SUPABASE_URL      = 'https://ljvfdbrxelmqyufxifsg.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqdmZkYnJ4ZWxtcXl1ZnhpZnNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg1NDYwMTcsImV4cCI6MjA2NDEyMjAxN30.vXd5WBBpJgsPeTQRZRcWOzbKJ0uQULyrCPiMlfyKr6A';
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+    // **** REPLACE THESE TWO LINES WITH YOUR ACTUAL SUPABASE CREDENTIALS ****
+    const SUPABASE_URL  = 'https://<your-project-ref>.supabase.co';
+    const SUPABASE_ANON = '<your-anon-key>';
+    // ********************************************************************************
+    let supabaseClient = null;
+    try {
+      // If you forgot to replace placeholders, supabase.createClient will fail
+      supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+      console.log('Supabase client initialized successfully.');
+    } catch (initErr) {
+      console.error('Failed to initialize Supabase client. Check your URL/KEY. Error:', initErr);
+      // We still want to prevent form submission from reloading the page:
+      document.getElementById('pay-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        alert('Payment cannot proceed: Supabase not initialized. Check console for errors.');
+      });
+      // Bail out—no further script needed
+      return;
+    }
 
     // ── 3) Fetch and display how many plots were chosen ───────────────────────────
-    const count = parseInt(localStorage.getItem('gradgrid-requiredCount') || '1', 10);
-    document.getElementById('count-display').textContent = count;
+    try {
+      const count = parseInt(localStorage.getItem('gradgrid-requiredCount') || '1', 10);
+      document.getElementById('count-display').textContent = count;
+      console.log('Number of plots chosen:', count);
 
-    // ── 4) Grab your stored reservation data (which includes price per plot) ──────
-    const reservation  = JSON.parse(localStorage.getItem('gradgrid-reservation') || '{}');
-    const pricePerPlot = Number(reservation.price) || 0;
+      // ── 4) Grab your stored reservation data (which includes price per plot) ──────
+      const reservation  = JSON.parse(localStorage.getItem('gradgrid-reservation') || '{}');
+      const pricePerPlot = Number(reservation.price) || 0;
+      console.log('Price per plot from reservation:', pricePerPlot);
 
-    // ── 5) Calculate and render the total ─────────────────────────────────────────
-    const total = count * pricePerPlot;
-    document.getElementById('total-display').textContent = total.toFixed(2);
+      // ── 5) Calculate and render the total ─────────────────────────────────────────
+      const total = count * pricePerPlot;
+      document.getElementById('total-display').textContent = total.toFixed(2);
+      console.log('Total to charge:', total.toFixed(2));
+    } catch (e) {
+      console.error('Error reading from localStorage:', e);
+    }
 
     // ── 6) Handle form submission: mark paid=true in Supabase, then go to final.html ─
     document.getElementById('pay-form').addEventListener('submit', async (e) => {
@@ -177,26 +201,28 @@
         alert('Please enter cardholder name.');
         return;
       }
+      console.log('Cardholder name entered:', cardName);
 
       // 6c) Update Supabase row: set paid = true
       try {
-        const { error: dbErr } = await supabase
+        const { data, error: dbErr } = await supabaseClient
           .from('uploads')
           .update({ paid: true })
           .eq('id', uploadId);
 
         if (dbErr) {
-          console.error('Supabase error:', dbErr);
+          console.error('Supabase returned error:', dbErr);
           alert('Payment failed. Please try again.');
           return;
         }
+        console.log('Supabase update succeeded. Row data:', data);
       } catch (err) {
-        console.error('Unexpected error when calling Supabase:', err);
+        console.error('Unexpected exception when calling Supabase:', err);
         alert('Payment failed. Please try again.');
         return;
       }
 
-      console.log('Update succeeded. Redirecting to final.html');
+      console.log('Redirecting to final.html');
       // 6d) Redirect to final confirmation page
       window.location.href = `final.html?uploadId=${uploadId}`;
     });
