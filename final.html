@@ -1,88 +1,19 @@
-<!DOCTYPE html> 
-<html lang="en">
-<head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Purchase Complete</title>
-  <style>
-    :root {
-      --navy:  #001f3f;
-      --duck:  #00bfa5;
-      --white: #ffffff;
-      --light: #fafafa;
-    }
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-    body {
-      font-family: Arial, sans-serif;
-      background: var(--light);
-      color: var(--navy);
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
-    }
-    .navbar {
-      height: 60px;
-      background: var(--navy);
-      color: var(--white);
-      display: flex;
-      align-items: center;
-      padding: 0 1.5rem;
-    }
-    .navbar .brand {
-      font-size: 1.25rem;
-      font-weight: bold;
-      color: var(--duck);
-    }
-    main {
-      flex: 1;
-      max-width: 500px;
-      margin: 2rem auto;
-      background: var(--white);
-      padding: 2rem;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      text-align: center;
-    }
-    h2 {
-      margin-top: 0;
-      margin-bottom: 1rem;
-    }
-    .summary p {
-      margin: 0.5rem 0;
-      font-size: 1rem;
-    }
-    #done-btn {
-      margin-top: 1.5rem;
-      padding: 0.75rem 1.5rem;
-      background: var(--duck);
-      color: var(--white);
-      border: none;
-      border-radius: 4px;
-      font-size: 1rem;
-      cursor: pointer;
-    }
-  </style>
-</head>
-<body>
-
-  <nav class="navbar">
-    <div class="brand">GradGrid 2025</div>
-  </nav>
-
-  <main>
-    <h2>Purchase Complete!</h2>
-    <div class="summary" id="summary"></div>
-    <button id="done-btn">Back to Home</button>
-  </main>
-
+  <!-- 1) Load Supabase JS library (v2 UMD build) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <!-- 2) Initialize Supabase client and wire up Confirm Payment button -->
   <script>
-    // Retrieve payment and reservation details
-    const payment = JSON.parse(localStorage.getItem('gradgrid-payment') || '{}');
-    const res     = JSON.parse(localStorage.getItem('gradgrid-reservation') || '{}');
+    // (Replace these values with your actual project URL and anon key)
+    const SUPABASE_URL      = 'https://ljvfdbrxelmqyufxifsg.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqdmZkYnJ4ZWxtcXl1ZnhpZnNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg1NDYwMTcsImV4cCI6MjA2NDEyMjAxN30.vXd5WBBpJgsPeTQRZRcWOzbKJ0uQULyrCPiMlfyKr6A';
+    try {
+      window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      console.log('Final.html: Supabase initialized.');
+    } catch (err) {
+      console.error('Final.html: Failed to initialize Supabase:', err);
+    }
+
+    // Retrieve reservation details (only need these for display)
+    const res = JSON.parse(localStorage.getItem('gradgrid-reservation') || '{}');
 
     // Helper to convert row index to letter
     function toLetter(n) {
@@ -97,24 +28,50 @@
       ? (res.minC + 1)
       : `${res.minC + 1}–${res.maxC + 1}`;
 
-    // Last 4 digits of card (placeholder)
-    const last4 = payment.number ? payment.number.slice(-4) : '----';
-
-    // Populate summary
+    // Populate summary (dummy card info)
     document.getElementById('summary').innerHTML = `
       <p><strong>Plots:</strong> Rows ${rowLabel}, Cols ${colLabel}</p>
       <p><strong>Area:</strong> ${res.area || 0} plot(s)</p>
-      <p><strong>Charged to Card:</strong> •••• •••• •••• ${last4}</p>
+      <p><strong>Charged to Card:</strong> •••• •••• •••• 1234</p>
     `;
 
-    // Done button: clear temp data and return to home
-    document.getElementById('done-btn').addEventListener('click', () => {
+    // Confirm Payment button: mark paid=true in Supabase, then go to index.html
+    document.getElementById('done-btn').addEventListener('click', async () => {
+      console.log('Confirm Payment clicked');
+
+      // 3a) Parse uploadId from URL
+      const params   = new URLSearchParams(window.location.search);
+      const uploadId = params.get('uploadId');
+      console.log('Parsed uploadId =', uploadId);
+      if (!uploadId) {
+        alert('Missing uploadId. Please retry.');
+        return;
+      }
+
+      // 3b) Update Supabase row: set paid = true
+      try {
+        console.log('Calling Supabase to update paid flag…');
+        const { data, error: dbErr } = await supabase
+          .from('uploads')
+          .update({ paid: true })
+          .eq('id', uploadId);
+
+        if (dbErr) {
+          console.error('Supabase.update returned error:', dbErr);
+          alert('Could not confirm payment; please try again.');
+          return;
+        }
+        console.log('Supabase.update succeeded:', data);
+      } catch (updateError) {
+        console.error('Exception when calling Supabase.update:', updateError);
+        alert('Could not confirm payment; please try again.');
+        return;
+      }
+
+      // 3c) Clear reservation data and redirect back to homepage
       localStorage.removeItem('gradgrid-requiredCount');
       localStorage.removeItem('gradgrid-reservation');
-      localStorage.removeItem('gradgrid-payment');
-      localStorage.removeItem('gradgrid-paymentConfirmed');
+      console.log('Redirecting to index.html');
       window.location.href = 'index.html';
     });
   </script>
-</body>
-</html>
