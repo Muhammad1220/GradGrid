@@ -139,24 +139,25 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
   <script>
-    // 2) Initialize Supabase client (replace with your actual values)
-    const SUPABASE_URL  = 'https://<your-project-ref>.supabase.co';
-    const SUPABASE_ANON = '<your-anon-key>';
-    const supabase     = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+    // ── 2) Initialize Supabase client ──────────────────────────────────────────────
+    // Replace the placeholders with your exact Supabase URL and anon key:
+    const SUPABASE_URL      = 'https://ljvfdbrxelmqyufxifsg.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqdmZkYnJ4ZWxtcXl1ZnhpZnNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg1NDYwMTcsImV4cCI6MjA2NDEyMjAxN30.vXd5WBBpJgsPeTQRZRcWOzbKJ0uQULyrCPiMlfyKr6A';
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
-    // 3) Fetch and display how many plots were chosen
+    // ── 3) Fetch and display how many plots were chosen ───────────────────────────
     const count = parseInt(localStorage.getItem('gradgrid-requiredCount') || '1', 10);
     document.getElementById('count-display').textContent = count;
 
-    // 4) Grab your stored reservation data (which includes price per plot)
+    // ── 4) Grab your stored reservation data (which includes price per plot) ──────
     const reservation  = JSON.parse(localStorage.getItem('gradgrid-reservation') || '{}');
     const pricePerPlot = Number(reservation.price) || 0;
 
-    // 5) Calculate and render the total
+    // ── 5) Calculate and render the total ─────────────────────────────────────────
     const total = count * pricePerPlot;
     document.getElementById('total-display').textContent = total.toFixed(2);
 
-    // 6) Handle form submission: mark paid=true in Supabase, then go to final.html
+    // ── 6) Handle form submission: mark paid=true in Supabase, then go to final.html ─
     document.getElementById('pay-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       console.log('Pay Now clicked');
@@ -170,26 +171,33 @@
         return;
       }
 
-      // 6b) Validate Cardholder Name
+      // 6b) Validate Cardholder Name is not empty
       const cardName = document.getElementById('card-name').value.trim();
       if (!cardName) {
         alert('Please enter cardholder name.');
         return;
       }
 
-      // 6c) Update Supabase row: set paid=true
-      const { error: dbErr } = await supabase
-        .from('uploads')
-        .update({ paid: true })
-        .eq('id', uploadId);
-      if (dbErr) {
-        console.error('Error marking paid:', dbErr);
+      // 6c) Update Supabase row: set paid = true
+      try {
+        const { error: dbErr } = await supabase
+          .from('uploads')
+          .update({ paid: true })
+          .eq('id', uploadId);
+
+        if (dbErr) {
+          console.error('Supabase error:', dbErr);
+          alert('Payment failed. Please try again.');
+          return;
+        }
+      } catch (err) {
+        console.error('Unexpected error when calling Supabase:', err);
         alert('Payment failed. Please try again.');
         return;
       }
 
       console.log('Update succeeded. Redirecting to final.html');
-      // 6d) Redirect to final confirmation
+      // 6d) Redirect to final confirmation page
       window.location.href = `final.html?uploadId=${uploadId}`;
     });
   </script>
