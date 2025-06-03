@@ -135,97 +135,105 @@
     </form>
   </main>
 
-  <!-- 1) Load Supabase JS library -->
+  <!-- 1) Load the Supabase JS library -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
   <script>
-    console.log('--- payment.html script starting ---');
+    /**
+     * Wrap all logic in an async function so that we can use `return;`
+     * without causing “Illegal return” at the top level.
+     */
+    (async function initPayment() {
+      console.log('--- payment.html script starting ---');
 
-    // ── 2) Initialize Supabase client ──────────────────────────────────────────────
-    // **** REPLACE THESE TWO LINES WITH YOUR ACTUAL SUPABASE CREDENTIALS ****
-    const SUPABASE_URL  = 'https://ljvfdbrxelmqyufxifsg.supabase.co';
-    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqdmZkYnJ4ZWxtcXl1ZnhpZnNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg1NDYwMTcsImV4cCI6MjA2NDEyMjAxN30.vXd5WBBpJgsPeTQRZRcWOzbKJ0uQULyrCPiMlfyKr6A';
-    // ********************************************************************************
-    let supabaseClient = null;
-    try {
-      // If you forgot to replace placeholders, supabase.createClient will fail
-      supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-      console.log('Supabase client initialized successfully.');
-    } catch (initErr) {
-      console.error('Failed to initialize Supabase client. Check your URL/KEY. Error:', initErr);
-      // We still want to prevent form submission from reloading the page:
-      document.getElementById('pay-form').addEventListener('submit', (e) => {
-        e.preventDefault();
-        alert('Payment cannot proceed: Supabase not initialized. Check console for errors.');
-      });
-      // Bail out—no further script needed
-      return;
-    }
+      // ── 2) Initialize Supabase client ──────────────────────────────────────────────
+      // **** REPLACE THESE TWO LINES WITH YOUR ACTUAL SUPABASE CREDENTIALS ****
+      const SUPABASE_URL  = 'https://ljvfdbrxelmqyufxifsg.supabase.co';
+      const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqdmZkYnJ4ZWxtcXl1ZnhpZnNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg1NDYwMTcsImV4cCI6MjA2NDEyMjAxN30.vXd5WBBpJgsPeTQRZRcWOzbKJ0uQULyrCPiMlfyKr6A';
+      // ********************************************************************************
 
-    // ── 3) Fetch and display how many plots were chosen ───────────────────────────
-    try {
-      const count = parseInt(localStorage.getItem('gradgrid-requiredCount') || '1', 10);
-      document.getElementById('count-display').textContent = count;
-      console.log('Number of plots chosen:', count);
-
-      // ── 4) Grab your stored reservation data (which includes price per plot) ──────
-      const reservation  = JSON.parse(localStorage.getItem('gradgrid-reservation') || '{}');
-      const pricePerPlot = Number(reservation.price) || 0;
-      console.log('Price per plot from reservation:', pricePerPlot);
-
-      // ── 5) Calculate and render the total ─────────────────────────────────────────
-      const total = count * pricePerPlot;
-      document.getElementById('total-display').textContent = total.toFixed(2);
-      console.log('Total to charge:', total.toFixed(2));
-    } catch (e) {
-      console.error('Error reading from localStorage:', e);
-    }
-
-    // ── 6) Handle form submission: mark paid=true in Supabase, then go to final.html ─
-    document.getElementById('pay-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      console.log('Pay Now clicked');
-
-      // 6a) Parse uploadId from URL
-      const params   = new URLSearchParams(window.location.search);
-      const uploadId = params.get('uploadId');
-      console.log('Got uploadId =', uploadId);
-      if (!uploadId) {
-        alert('Missing uploadId. Please retry.');
-        return;
-      }
-
-      // 6b) Validate Cardholder Name is not empty
-      const cardName = document.getElementById('card-name').value.trim();
-      if (!cardName) {
-        alert('Please enter cardholder name.');
-        return;
-      }
-      console.log('Cardholder name entered:', cardName);
-
-      // 6c) Update Supabase row: set paid = true
+      let supabaseClient;
       try {
-        const { data, error: dbErr } = await supabaseClient
-          .from('uploads')
-          .update({ paid: true })
-          .eq('id', uploadId);
+        supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+        console.log('Supabase client initialized successfully.');
+      } catch (initErr) {
+        console.error('Failed to initialize Supabase client. Check your URL/KEY. Error:', initErr);
 
-        if (dbErr) {
-          console.error('Supabase returned error:', dbErr);
+        // Prevent the form from reloading the page
+        document.getElementById('pay-form').addEventListener('submit', (e) => {
+          e.preventDefault();
+          alert('Payment cannot proceed: Supabase not initialized. Check console for errors.');
+        });
+
+        // Exit the function early
+        return;
+      }
+
+      // ── 3) Fetch and display how many plots were chosen ───────────────────────────
+      try {
+        const count = parseInt(localStorage.getItem('gradgrid-requiredCount') || '1', 10);
+        document.getElementById('count-display').textContent = count;
+        console.log('Number of plots chosen:', count);
+
+        // ── 4) Grab your stored reservation data (which includes price per plot) ──────
+        const reservation  = JSON.parse(localStorage.getItem('gradgrid-reservation') || '{}');
+        const pricePerPlot = Number(reservation.price) || 0;
+        console.log('Price per plot from reservation:', pricePerPlot);
+
+        // ── 5) Calculate and render the total ─────────────────────────────────────────
+        const total = count * pricePerPlot;
+        document.getElementById('total-display').textContent = total.toFixed(2);
+        console.log('Total to charge:', total.toFixed(2));
+      } catch (e) {
+        console.error('Error reading from localStorage:', e);
+      }
+
+      // ── 6) Handle form submission: mark paid=true in Supabase, then go to final.html ─
+      document.getElementById('pay-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        console.log('Pay Now clicked');
+
+        // 6a) Parse uploadId from URL
+        const params   = new URLSearchParams(window.location.search);
+        const uploadId = params.get('uploadId');
+        console.log('Got uploadId =', uploadId);
+        if (!uploadId) {
+          alert('Missing uploadId. Please retry.');
+          return;
+        }
+
+        // 6b) Validate Cardholder Name is not empty
+        const cardName = document.getElementById('card-name').value.trim();
+        if (!cardName) {
+          alert('Please enter cardholder name.');
+          return;
+        }
+        console.log('Cardholder name entered:', cardName);
+
+        // 6c) Update Supabase row: set paid = true
+        try {
+          const { data, error: dbErr } = await supabaseClient
+            .from('uploads')
+            .update({ paid: true })
+            .eq('id', uploadId);
+
+          if (dbErr) {
+            console.error('Supabase returned error:', dbErr);
+            alert('Payment failed. Please try again.');
+            return;
+          }
+          console.log('Supabase update succeeded. Row data:', data);
+        } catch (err) {
+          console.error('Unexpected exception when calling Supabase:', err);
           alert('Payment failed. Please try again.');
           return;
         }
-        console.log('Supabase update succeeded. Row data:', data);
-      } catch (err) {
-        console.error('Unexpected exception when calling Supabase:', err);
-        alert('Payment failed. Please try again.');
-        return;
-      }
 
-      console.log('Redirecting to final.html');
-      // 6d) Redirect to final confirmation page
-      window.location.href = `final.html?uploadId=${uploadId}`;
-    });
+        console.log('Redirecting to final.html');
+        // 6d) Redirect to final confirmation page
+        window.location.href = `final.html?uploadId=${uploadId}`;
+      });
+    })();
   </script>
 </body>
 </html>
