@@ -384,6 +384,7 @@
     const GRID_COLS = 20, GRID_ROWS = 30, TOTAL = GRID_COLS * GRID_ROWS;
     let isSelecting = false, isMouseDown = false, isDragging = false;
     let requiredCount = 1, startCell = null, endCell = null, refreshInterval;
+    let startX, startY;
     const canvas = document.getElementById('canvas');
     const instructions = document.getElementById('instructions');
     const selBar = document.getElementById('selection-bar');
