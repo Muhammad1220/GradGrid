@@ -135,38 +135,49 @@
     </form>
   </main>
 
+  <!-- 1) Load Supabase JS library -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
   <script>
-    // 1) Fetch and display how many plots were chosen
+    // 2) Initialize Supabase client (replace with your actual values)
+    const SUPABASE_URL  = 'https://<your-project-ref>.supabase.co';
+    const SUPABASE_ANON = '<your-anon-key>';
+    const supabase     = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+    // 3) Fetch and display how many plots were chosen
     const count = parseInt(localStorage.getItem('gradgrid-requiredCount') || '1', 10);
     document.getElementById('count-display').textContent = count;
 
-    // 2) Grab your stored reservation data (which includes price per plot)
-    const reservation = JSON.parse(localStorage.getItem('gradgrid-reservation') || '{}');
+    // 4) Grab your stored reservation data (which includes price per plot)
+    const reservation  = JSON.parse(localStorage.getItem('gradgrid-reservation') || '{}');
     const pricePerPlot = Number(reservation.price) || 0;
 
-    // 3) Calculate and render the total
+    // 5) Calculate and render the total
     const total = count * pricePerPlot;
     document.getElementById('total-display').textContent = total.toFixed(2);
 
-    // 4) Handle form submission: mark paid=true in Supabase, then go to final.html
+    // 6) Handle form submission: mark paid=true in Supabase, then go to final.html
     document.getElementById('pay-form').addEventListener('submit', async (e) => {
       e.preventDefault();
-      // 4a) Parse uploadId from URL
+      console.log('Pay Now clicked');
+
+      // 6a) Parse uploadId from URL
       const params   = new URLSearchParams(window.location.search);
       const uploadId = params.get('uploadId');
+      console.log('Got uploadId =', uploadId);
       if (!uploadId) {
         alert('Missing uploadId. Please retry.');
         return;
       }
 
-      // 4b) (Optional) Collect card info if needed; here we assume payment succeeds immediately.
+      // 6b) Validate Cardholder Name
       const cardName = document.getElementById('card-name').value.trim();
       if (!cardName) {
         alert('Please enter cardholder name.');
         return;
       }
 
-      // 4c) Update Supabase row: set paid=true
+      // 6c) Update Supabase row: set paid=true
       const { error: dbErr } = await supabase
         .from('uploads')
         .update({ paid: true })
@@ -177,10 +188,10 @@
         return;
       }
 
-      // 4d) Redirect to final confirmation
+      console.log('Update succeeded. Redirecting to final.html');
+      // 6d) Redirect to final confirmation
       window.location.href = `final.html?uploadId=${uploadId}`;
     });
   </script>
 </body>
 </html>
- 
