@@ -186,35 +186,37 @@
 
         // 6b) Validate Cardholder Name
         const cardName = document.getElementById('card-name').value.trim();
+        console.log('Cardholder name entered:', cardName);
         if (!cardName) {
           alert('Please enter cardholder name.');
           return;
         }
-        console.log('Cardholder name entered:', cardName);
 
         // 6c) Update Supabase row: set paid = true
         try {
+          console.log('Calling Supabase to update paid flag…');
           const { data, error: dbErr } = await supabaseClient
             .from('uploads')
             .update({ paid: true })
             .eq('id', uploadId);
 
           if (dbErr) {
-            console.error('Supabase update error:', dbErr);
+            console.error('Supabase.update returned error:', dbErr);
             alert('Payment failed. Please try again.');
             return;
           }
-          console.log('Supabase update succeeded:', data);
-        } catch (err) {
-          console.error('Exception when calling Supabase:', err);
+          console.log('Supabase.update succeeded:', data);
+        } catch (updateError) {
+          console.error('Exception when calling Supabase.update:', updateError);
           alert('Payment failed. Please try again.');
           return;
         }
 
-        // 6d) Redirect immediately back to index.html
+        // 6d) Redirect immediately back to index.html so the paid upload will show
         console.log('Redirecting to index.html');
         window.location.href = 'index.html';
       });
+
     })();
   </script>
 </body>
