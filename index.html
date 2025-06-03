@@ -629,8 +629,13 @@
       }
       if (isDragging) {
         isDragging = false;
+        // One final update when drag ends:
+        renderGrid();
         if (refreshInterval) clearInterval(refreshInterval);
-        refreshInterval = setInterval(renderGrid, 5000);
+        // Only refresh when not dragging:
+        refreshInterval = setInterval(() => {
+          if (!isDragging) renderGrid();
+        }, 5000);
       }
     }
     document.addEventListener('mouseup', onRelease);
@@ -661,7 +666,9 @@
 
       // 2. First render & periodic refresh
       renderGrid();
-      refreshInterval = setInterval(renderGrid, 5000);
+      refreshInterval = setInterval(() => {
+        if (!isDragging) renderGrid();
+      }, 5000);
     });
 
 
