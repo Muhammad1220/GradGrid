@@ -657,6 +657,13 @@
     function onRelease() {
       if (isSelecting && isMouseDown) {
         isMouseDown = false;
+
+        // If no drag threshold was ever crossed, treat this as a one-cell selection:
+        if (!isDragging && startCell) {
+          endCell = startCell;
+          drawSelection();
+        }
+
         finalizeSelection();
       }
       // Always do a final refresh on release
