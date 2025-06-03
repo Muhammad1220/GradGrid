@@ -135,21 +135,31 @@
     </form>
   </main>
 
-  <!-- 1) Load Supabase JS library (v2 UMD build) -->
+  <!-- 1) Load Supabase JS library BEFORE any code that uses `supabase` -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
   <script>
     (async function initPayment() {
       console.log('--- payment.html script starting ---');
 
-      // 2) Initialize Supabase client (replace with your actual credentials)
+      // 2) Initialize Supabase client (replace placeholders)
       const SUPABASE_URL  = 'https://ljvfdbrxelmqyufxifsg.supabase.co';
       const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqdmZkYnJ4ZWxtcXl1ZnhpZnNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg1NDYwMTcsImV4cCI6MjA2NDEyMjAxN30.vXd5WBBpJgsPeTQRZRcWOzbKJ0uQULyrCPiMlfyKr6A';
-      const supabase      = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+      let supabaseClient;
+      try {
+        supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+        console.log('Supabase client initialized.');
+      } catch (initErr) {
+        console.error('Failed to initialize Supabase client:', initErr);
+        // Prevent the form from submitting
+        document.getElementById('pay-form').addEventListener('submit', e => e.preventDefault());
+        return;
+      }
 
-      // 3) Display how many plots were chosen
+      // 3) Fetch and display how many plots were chosen
       const count = parseInt(localStorage.getItem('gradgrid-requiredCount') || '1', 10);
       document.getElementById('count-display').textContent = count;
+      console.log('Selected plots count =', count);
 
       // 4) Grab stored reservation data (includes price per plot)
       const reservation  = JSON.parse(localStorage.getItem('gradgrid-reservation') || '{}');
@@ -158,6 +168,7 @@
       // 5) Calculate and render the total
       const total = count * pricePerPlot;
       document.getElementById('total-display').textContent = total.toFixed(2);
+      console.log('Total charge =', total.toFixed(2));
 
       // 6) Handle form submission: mark paid=true, then redirect to index.html
       document.getElementById('pay-form').addEventListener('submit', async (e) => {
@@ -183,24 +194,25 @@
 
         // 6c) Update Supabase row: set paid = true
         try {
-          const { data, error: dbErr } = await supabase
+          const { data, error: dbErr } = await supabaseClient
             .from('uploads')
             .update({ paid: true })
             .eq('id', uploadId);
 
           if (dbErr) {
-            console.error('Supabase returned error:', dbErr);
+            console.error('Supabase update error:', dbErr);
             alert('Payment failed. Please try again.');
             return;
           }
-          console.log('Supabase update succeeded for uploadId =', uploadId);
+          console.log('Supabase update succeeded:', data);
         } catch (err) {
-          console.error('Unexpected exception when calling Supabase:', err);
+          console.error('Exception when calling Supabase:', err);
           alert('Payment failed. Please try again.');
           return;
         }
 
-        // 6d) Redirect immediately back to index.html to see the newly paid upload
+        // 6d) Redirect immediately back to index.html
+        console.log('Redirecting to index.html');
         window.location.href = 'index.html';
       });
     })();
