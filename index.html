@@ -319,11 +319,11 @@
       <div>Price: <strong id="price-count">$0/plot</strong></div>
     </div>
     <div class="menu">
-      <a id="home-btn" href="index.html">Home</a>
-      <a id="buy-plot-btn" href="#">Buy Plot</a>
-      <a id="gallery-btn" href="gallery.html">Gallery of Uploads</a>
-      <a id="clear-grid-btn" href="#">Clear Grid</a>
-      <a id="faq-btn" href="faq.html">Help / FAQ</a>
+      <a id="home-btn">Home</a>
+      <a id="buy-plot-btn">Buy Plot</a>
+      <a id="gallery-btn">Gallery of Uploads</a>
+      <a id="clear-grid-btn">Clear Grid</a>
+      <a id="faq-btn">Help / FAQ</a>
     </div>
   </nav>
 
@@ -384,7 +384,6 @@
     const GRID_COLS = 20, GRID_ROWS = 30, TOTAL = GRID_COLS * GRID_ROWS;
     let isSelecting = false, isMouseDown = false, isDragging = false;
     let requiredCount = 1, startCell = null, endCell = null, refreshInterval;
-    let startX, startY;
     const canvas = document.getElementById('canvas');
     const instructions = document.getElementById('instructions');
     const selBar = document.getElementById('selection-bar');
@@ -582,29 +581,22 @@
       window.location.href = 'upload.html';
     };
 
-    // —— Drag-to-select with movement threshold (mouse + touch) —— 
+    // —— Drag-to-select (mouse + touch) —— 
     cells.forEach(cell => {
       // Mouse down handler
-      cell.addEventListener('mousedown', e => {
+      cell.addEventListener('mousedown', () => {
         if (!isSelecting || cell.classList.contains('reserved')) return;
         isMouseDown = true;
-        isDragging = false;
-        startX = e.clientX;
-        startY = e.clientY;
         startCell = cell;
         endCell = null;
         clearSelection();
         selBar.style.display = 'none';
       });
       // Touch start handler (for taps/initial touch)
-      cell.addEventListener('touchstart', e => {
-        e.preventDefault();
+      cell.addEventListener('touchstart', (evt) => {
+        evt.preventDefault();
         if (!isSelecting || cell.classList.contains('reserved')) return;
-        const touch = e.touches[0];
         isMouseDown = true;
-        isDragging = false;
-        startX = touch.clientX;
-        startY = touch.clientY;
         startCell = cell;
         endCell = null;
         clearSelection();
@@ -612,69 +604,50 @@
       });
       // Mouseover (drag select)
       cell.addEventListener('mouseover', () => {
-        if (isSelecting && isMouseDown && isDragging && !cell.classList.contains('reserved')) {
+        if (isSelecting && isMouseDown && !cell.classList.contains('reserved')) {
           endCell = cell;
           drawSelection();
         }
       });
     });
-    // Track mouse movement for drag threshold
-    canvas.addEventListener('mousemove', e => {
-      if (!isMouseDown) return;
-      const dx = Math.abs(e.clientX - startX);
-      const dy = Math.abs(e.clientY - startY);
-      if (!isDragging && (dx > 5 || dy > 5)) {
-        isDragging = true;
-        if (refreshInterval) clearInterval(refreshInterval);
-      }
-      if (isDragging) {
-        const target = document.elementFromPoint(e.clientX, e.clientY);
-        if (target && target.classList.contains('canvas-cell') && !target.classList.contains('reserved')) {
-          endCell = target;
-          drawSelection();
-        }
-      }
-    });
-    // Track finger movement with threshold
-    canvas.addEventListener('touchmove', e => {
+    // Track finger movement over the grid container
+    canvas.addEventListener('touchmove', (evt) => {
       if (!isSelecting || !isMouseDown) return;
-      const touch = e.touches[0];
-      const dx = Math.abs(touch.clientX - startX);
-      const dy = Math.abs(touch.clientY - startY);
-      if (!isDragging && (dx > 5 || dy > 5)) {
-        isDragging = true;
-        if (refreshInterval) clearInterval(refreshInterval);
-      }
-      if (isDragging) {
-        e.preventDefault();
-        const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
-        if (targetElement && targetElement.classList.contains('canvas-cell') && !targetElement.classList.contains('reserved')) {
-          endCell = targetElement;
-          drawSelection();
-        }
+      evt.preventDefault();
+      const touch = evt.touches[0];
+      const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
+      if (!targetElement) return;
+      if (targetElement.classList.contains('canvas-cell') && !targetElement.classList.contains('reserved')) {
+        endCell = targetElement;
+        drawSelection();
       }
     });
     function onRelease() {
       if (isSelecting && isMouseDown) {
         isMouseDown = false;
-
-        // If no drag threshold was ever crossed, treat this as a one-cell selection:
-        if (!isDragging && startCell) {
-          endCell = startCell;
-          drawSelection();
-        }
-
         finalizeSelection();
       }
-      // Always do a final refresh on release
-      if (refreshInterval) clearInterval(refreshInterval);
-      renderGrid();
-      // Resume auto-refresh
-      refreshInterval = setInterval(() => {
-        if (!isDragging) renderGrid();
-      }, 5000);
-      isDragging = false;
+      if (isDragging) {
+        isDragging = false;
+        // One final update when drag ends:
+        renderGrid();
+        if (refreshInterval) clearInterval(refreshInterval);
+        // Only refresh when not dragging:
+        refreshInterval = setInterval(() => {
+          if (!isDragging) renderGrid();
+        }, 5000);
+      }
     }
+    document.addEventListener('mouseup', onRelease);
+    document.addEventListener('touchend', onRelease);
+    canvas.addEventListener('mousedown', () => {
+      isDragging = true;
+      if (refreshInterval) clearInterval(refreshInterval);
+    });
+    canvas.addEventListener('touchstart', () => {
+      isDragging = true;
+      if (refreshInterval) clearInterval(refreshInterval);
+    });
 
     // —— Init: fetch uploads & auto-refresh —— 
     window.addEventListener('DOMContentLoaded', async () => {
