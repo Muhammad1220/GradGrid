@@ -115,6 +115,11 @@
         <strong>Total:</strong>
         $<span id="total-display">0.00</span>
       </p>
+      <!-- **NEW: Time Remaining Display** -->
+      <p>
+        <strong>Time Remaining:</strong>
+        <span id="timer-display">20:00</span>
+      </p>
     </div>
 
     <form id="pay-form">
@@ -145,7 +150,7 @@
     (async function initPayment() {
       console.log('--- payment.html script starting ---');
 
-      // 2) Initialize Supabase client (replace placeholders)
+      // 2) Initialize Supabase client
       const SUPABASE_URL  = 'https://ljvfdbrxelmqyufxifsg.supabase.co';
       const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqdmZkYnJ4ZWxtcXl1ZnhpZnNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg1NDYwMTcsImV4cCI6MjA2NDEyMjAxN30.vXd5WBBpJgsPeTQRZRcWOzbKJ0uQULyrCPiMlfyKr6A';
       let supabaseClient;
@@ -154,12 +159,12 @@
         console.log('Supabase client initialized.');
       } catch (initErr) {
         console.error('Failed to initialize Supabase client:', initErr);
-        // Prevent the form from submitting
+        // Prevent form submission if initialization fails
         document.getElementById('pay-form').addEventListener('submit', e => e.preventDefault());
         return;
       }
 
-      // 3) Parse uploadId from URL and verify upload + holds in Supabase
+      // 3) Parse uploadId from URL
       const params   = new URLSearchParams(window.location.search);
       const uploadId = params.get('uploadId');
       if (!uploadId) {
@@ -185,15 +190,14 @@
         return;
       }
 
-      // 5) Verify holds are still valid (unpaid & unexpired) for this uploadId
+      // 5) Verify holds are still valid (unpaid & unexpired) and fetch reserved_at
       const twentyMinAgo = new Date(Date.now() - 20 * 60 * 1000).toISOString();
       const { data: resRows, error: resErr } = await supabaseClient
         .from('reservations')
-        .select('plot_row')
+        .select('plot_row, reserved_at')
         .eq('upload_id', uploadId)
         .eq('paid', false)
         .gte('reserved_at', twentyMinAgo);
-      // Number of cells in rectangle:
       const expectedCount = (uploadRow.max_r - uploadRow.min_r + 1) * (uploadRow.max_c - uploadRow.min_c + 1);
       if (resErr || !resRows || resRows.length !== expectedCount) {
         alert('Your hold has expired or is invalid. Please start over.');
@@ -201,7 +205,28 @@
         return;
       }
 
-      // 6) Compute and render “Plots” count and total ($0.00 since price-per-plot is fixed at $0)
+      // 6) Compute countdown based on the earliest reserved_at
+      const reservedAt = new Date(resRows[0].reserved_at);
+      const expiresAt  = new Date(reservedAt.getTime() + 20 * 60 * 1000);
+
+      function updateTimer() {
+        const now = new Date();
+        const diffMs = expiresAt - now;
+        if (diffMs <= 0) {
+          alert('Your hold has expired. Returning to grid.');
+          window.location.href = 'index.html?expired=true';
+          return;
+        }
+        const totalSeconds = Math.floor(diffMs / 1000);
+        const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+        const seconds = String(totalSeconds % 60).padStart(2, '0');
+        document.getElementById('timer-display').textContent = `${minutes}:${seconds}`;
+      }
+      // Start the timer loop
+      updateTimer();
+      const timerInterval = setInterval(updateTimer, 1000);
+
+      // 7) Compute and render “Plots” count and total (price-per-plot = $0)
       const count = expectedCount;
       document.getElementById('count-display').textContent = count;
       console.log('Selected plots count =', count);
@@ -211,21 +236,12 @@
       document.getElementById('total-display').textContent = total.toFixed(2);
       console.log('Total charge =', total.toFixed(2));
 
-      // 6) Handle form submission: redirect to final.html, then final.html will mark paid=true
+      // 8) Handle form submission: mark paid=true on upload & reservations, then redirect
       document.getElementById('pay-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         console.log('Pay Now clicked');
 
-        // 6a) Parse uploadId from URL
-        const params   = new URLSearchParams(window.location.search);
-        const uploadId = params.get('uploadId');
-        console.log('Got uploadId =', uploadId);
-        if (!uploadId) {
-          alert('Missing uploadId. Please retry.');
-          return;
-        }
-
-        // 6b) Validate Cardholder Name
+        // 8a) Validate Cardholder Name
         const cardName = document.getElementById('card-name').value.trim();
         console.log('Cardholder name entered:', cardName);
         if (!cardName) {
@@ -233,8 +249,7 @@
           return;
         }
 
-        // 6c) First mark paid = true on both uploads and reservations, then redirect
-        //   i. Mark uploads.paid = true
+        // 8b) Mark uploads.paid = true
         const { error: updUploadErr } = await supabaseClient
           .from('uploads')
           .update({ paid: true })
@@ -245,7 +260,7 @@
           return;
         }
 
-        //   ii. Mark reservations.paid = true for this uploadId
+        // 8c) Mark reservations.paid = true for this uploadId
         const { error: updResErr } = await supabaseClient
           .from('reservations')
           .update({ paid: true })
@@ -256,11 +271,305 @@
           return;
         }
 
-        //   iii. Redirect to final.html
+        // 8d) Redirect to final.html
         window.location.href = `final.html?uploadId=${uploadId}`;
       });
-
     })();
   </script>
 </body>
+</html>
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Confirm Your Reservation</title>
+  <style>
+    :root {
+      --navy: #001f3f;
+      --duck: #00bfa5;
+      --white: #ffffff;
+      --light: #fafafa;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: var(--light);
+      color: var(--navy);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    .navbar {
+      height: 60px;
+      background: var(--navy);
+      color: var(--white);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1.5rem;
+    }
+
+    .navbar .brand {
+      font-size: 1.25rem;
+      font-weight: bold;
+      color: var(--duck);
+    }
+
+    .navbar a {
+      color: var(--white);
+      text-decoration: none;
+      margin-left: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    main {
+      flex: 1;
+      max-width: 400px;
+      margin: 2rem auto;
+      background: var(--white);
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    h2 {
+      margin-top: 0;
+      margin-bottom: 1rem;
+    }
+
+    .summary p {
+      margin: 0.5rem 0;
+      font-size: 1rem;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    label {
+      display: flex;
+      flex-direction: column;
+      font-weight: bold;
+      font-size: 0.95rem;
+    }
+
+    input {
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 1rem;
+      margin-top: 0.25rem;
+    }
+
+    button {
+      padding: 0.75rem;
+      background: var(--duck);
+      color: var(--white);
+      border: none;
+      border-radius: 4px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+
+  <nav class="navbar">
+    <div class="brand">GradGrid 2025</div>
+    <div class="menu">
+      <a href="index.html">Cancel</a>
+      <a href="upload.html">Back to Upload</a>
+      <a href="gallery.html">Gallery of Uploads</a>
+      <a href="faq.html">Help / FAQ</a>
+    </div>
+  </nav>
+
+  <main>
+    <div class="summary">
+      <h2>Confirm Your Reservation</h2>
+      <p>
+        <strong>Plots:</strong>
+        <span id="count-display">0</span>
+      </p>
+      <p>
+        <strong>Total:</strong>
+        $<span id="total-display">0.00</span>
+      </p>
+      <!-- **NEW: Time Remaining Display** -->
+      <p>
+        <strong>Time Remaining:</strong>
+        <span id="timer-display">20:00</span>
+      </p>
+    </div>
+
+    <form id="pay-form">
+      <label>
+        Cardholder Name
+        <input type="text" id="card-name" placeholder="Jane Doe" required>
+      </label>
+      <label>
+        Card Number
+        <input type="text" id="card-number" maxlength="19" placeholder="1234 5678 9012 3456" required>
+      </label>
+      <label>
+        Expiry (MM/YY)
+        <input type="text" id="card-expiry" maxlength="5" placeholder="08/24" required>
+      </label>
+      <label>
+        CVC
+        <input type="text" id="card-cvc" maxlength="3" placeholder="123" required>
+      </label>
+      <button type="submit">Pay Now</button>
+    </form>
+  </main>
+
+  <!-- 1) Load Supabase JS library BEFORE any code that uses `supabase` -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+  <script>
+    (async function initPayment() {
+      console.log('--- payment.html script starting ---');
+
+      // 2) Initialize Supabase client
+      const SUPABASE_URL = 'https://ljvfdbrxelmqyufxifsg.supabase.co';
+      const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqdmZkYnJ4ZWxtcXl1ZnhpZnNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg1NDYwMTcsImV4cCI6MjA2NDEyMjAxN30.vXd5WBBpJgsPeTQRZRcWOzbKJ0uQULyrCPiMlfyKr6A';
+      let supabaseClient;
+      try {
+        supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+        console.log('Supabase client initialized.');
+      } catch (initErr) {
+        console.error('Failed to initialize Supabase client:', initErr);
+        // Prevent form submission if initialization fails
+        document.getElementById('pay-form').addEventListener('submit', e => e.preventDefault());
+        return;
+      }
+
+      // 3) Parse uploadId from URL
+      const params = new URLSearchParams(window.location.search);
+      const uploadId = params.get('uploadId');
+      if (!uploadId) {
+        alert('Missing uploadId. Please retry.');
+        window.location.href = 'index.html';
+        return;
+      }
+
+      // 4) Fetch the uploads row to confirm it exists and isn’t already paid
+      const { data: uploadRow, error: uploadErr } = await supabaseClient
+        .from('uploads')
+        .select('min_r, max_r, min_c, max_c, paid')
+        .eq('id', uploadId)
+        .single();
+      if (uploadErr || !uploadRow) {
+        alert('Unable to find that reservation. Please start over.');
+        window.location.href = 'index.html';
+        return;
+      }
+      if (uploadRow.paid) {
+        // Already paid → go straight to final
+        window.location.href = `final.html?uploadId=${uploadId}`;
+        return;
+      }
+
+      // 5) Verify holds are still valid (unpaid & unexpired) and fetch reserved_at
+      const twentyMinAgo = new Date(Date.now() - 20 * 60 * 1000).toISOString();
+      const { data: resRows, error: resErr } = await supabaseClient
+        .from('reservations')
+        .select('plot_row, reserved_at')
+        .eq('upload_id', uploadId)
+        .eq('paid', false)
+        .gte('reserved_at', twentyMinAgo);
+      const expectedCount = (uploadRow.max_r - uploadRow.min_r + 1) * (uploadRow.max_c - uploadRow.min_c + 1);
+      if (resErr || !resRows || resRows.length !== expectedCount) {
+        alert('Your hold has expired or is invalid. Please start over.');
+        window.location.href = 'index.html';
+        return;
+      }
+
+      // 6) Compute countdown based on the earliest reserved_at
+      const reservedAt = new Date(resRows[0].reserved_at);
+      const expiresAt = new Date(reservedAt.getTime() + 20 * 60 * 1000);
+
+      function updateTimer() {
+        const now = new Date();
+        const diffMs = expiresAt - now;
+        if (diffMs <= 0) {
+          alert('Your hold has expired. Returning to grid.');
+          window.location.href = 'index.html?expired=true';
+          return;
+        }
+        const totalSeconds = Math.floor(diffMs / 1000);
+        const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+        const seconds = String(totalSeconds % 60).padStart(2, '0');
+        document.getElementById('timer-display').textContent = `${minutes}:${seconds}`;
+      }
+      // Start the timer loop
+      updateTimer();
+      const timerInterval = setInterval(updateTimer, 1000);
+
+      // 7) Compute and render “Plots” count and total (price-per-plot = $0)
+      const count = expectedCount;
+      document.getElementById('count-display').textContent = count;
+      console.log('Selected plots count =', count);
+
+      const pricePerPlot = 0;
+      const total = count * pricePerPlot;
+      document.getElementById('total-display').textContent = total.toFixed(2);
+      console.log('Total charge =', total.toFixed(2));
+
+      // 8) Handle form submission: mark paid=true on upload & reservations, then redirect
+      document.getElementById('pay-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        console.log('Pay Now clicked');
+
+        // 8a) Validate Cardholder Name
+        const cardName = document.getElementById('card-name').value.trim();
+        console.log('Cardholder name entered:', cardName);
+        if (!cardName) {
+          alert('Please enter cardholder name.');
+          return;
+        }
+
+        // 8b) Mark uploads.paid = true
+        const { error: updUploadErr } = await supabaseClient
+          .from('uploads')
+          .update({ paid: true })
+          .eq('id', uploadId);
+        if (updUploadErr) {
+          console.error('Error marking upload as paid:', updUploadErr);
+          alert('Payment succeeded but failed to update database. Contact support.');
+          return;
+        }
+
+        // 8c) Mark reservations.paid = true for this uploadId
+        const { error: updResErr } = await supabaseClient
+          .from('reservations')
+          .update({ paid: true })
+          .eq('upload_id', uploadId);
+        if (updResErr) {
+          console.error('Error marking reservations as paid:', updResErr);
+          alert('Payment succeeded but failed to update reservations. Contact support.');
+          return;
+        }
+
+        // 8d) Redirect to final.html
+        window.location.href = `final.html?uploadId=${uploadId}`;
+      });
+    })();
+  </script>
+</body>
+
 </html>

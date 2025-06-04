@@ -256,9 +256,16 @@
     <h2>Upload Your Plot Content</h2>
     <div id="plot-info"></div>
 
+    <!-- **NEW: Time Remaining Display** -->
+    <p>
+      <strong>Time Remaining:</strong>
+      <span id="timer-display">20:00</span>
+    </p>
+
     <form id="upload-form">
       <div class="types">
-        <label>
+        …
+ <label>
           <input type="radio" name="type" value="image" checked /> Image
         </label>
         <label>
@@ -446,6 +453,29 @@
         window.location.href = "index.html?expired=true";
         return;
       }
+      // **NEW: Compute countdown based on the earliest reserved_at**
+      //    (All reserved cells share the same timestamp, so pick the first one.)
+      const reservedAt = new Date(holdRows[0].reserved_at);
+      const expiresAt  = new Date(reservedAt.getTime() + 20 * 60 * 1000);
+
+      function updateTimer() {
+        const now = new Date();
+        const diffMs = expiresAt - now;
+        if (diffMs <= 0) {
+          // Time’s up → redirect back to grid
+          alert('Your hold has expired. Returning to grid.');
+          window.location.href = 'index.html?expired=true';
+          return;
+        }
+        const totalSeconds = Math.floor(diffMs / 1000);
+        const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+        const seconds = String(totalSeconds % 60).padStart(2, '0');
+        document.getElementById('timer-display').textContent = `${minutes}:${seconds}`;
+      }
+      // Start the timer loop
+      updateTimer();
+      const timerInterval = setInterval(updateTimer, 1000);
+
       // Compute aspect ratio & display “Plot: Rows …, Cols …”
       const w = maxC - minC + 1;
       const h = maxR - minR + 1;
@@ -458,8 +488,8 @@
       const colsText =
         minC === maxC ? minC + 1 : `${minC + 1}–${maxC + 1}`;
       infoEl.textContent = `Plot: Rows ${rowsText}, Cols ${colsText}`;
-      // Store for later use in submission
-      window.reservation = { minR, maxR, minC, maxC };
+      // Store for later use in submission (including expiresAt)
+      window.reservation = { minR, maxR, minC, maxC, expiresAt };
 
       // Already uploaded? (check “uploads” table)
       const { data: existingUpload, error: existingError } = await supabase
