@@ -437,6 +437,7 @@
   <script>
     // —— Config & State —— 
     const GRID_COLS = 20, GRID_ROWS = 30, TOTAL = GRID_COLS * GRID_ROWS;
+    const basePrice = 2.00; // ← your starting price per plot (adjust as needed)
     let isSelecting = false, isMouseDown = false, isDragging = false;
     let requiredCount = 1, startCell = null, endCell = null, refreshInterval;
     const canvas = document.getElementById('canvas');
@@ -542,15 +543,28 @@
         });
       }
 
-      // 5. Update counters
+      // 5. Update counters & dynamic pricing
       const allUsed = new Set(activeHolds);
       getUploads().forEach(u => {
         for (let r = u.min_r; r <= u.max_r; r++)
           for (let c = u.min_c; c <= u.max_c; c++)
             allUsed.add(r * GRID_COLS + c);
       });
-      document.getElementById('sold-count').textContent = allUsed.size;
-      document.getElementById('avail-count').textContent = TOTAL - allUsed.size;
+      // Calculate how many cells have been sold so far
+      const soldCells = allUsed.size;
+      // Determine how many “blocks of 10” have sold
+      const blocksSold = Math.floor(soldCells / 10);
+      // Surcharge = $0.50 per full 10‐cell block sold
+      const surcharge = blocksSold * 0.5;
+      // Final price = base + surcharge
+      const currentPrice = basePrice + surcharge;
+      // Update Sold / Available counts
+      document.getElementById('sold-count').textContent = soldCells;
+      document.getElementById('avail-count').textContent = TOTAL - soldCells;
+      // Update the Price display in the navbar
+      document.getElementById('price-count').textContent = '$' + currentPrice.toFixed(2) + '/plot';
+      // Store for later (e.g., if you need to reference on upload/payment pages)
+      window.currentPrice = currentPrice;
     }
 
     // —— Selection logic —— 

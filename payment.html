@@ -168,9 +168,12 @@
       const SUPABASE_URL = 'https://ljvfdbrxelmqyufxifsg.supabase.co';
       const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqdmZkYnJ4ZWxtcXl1ZnhpZnNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg1NDYwMTcsImV4cCI6MjA2NDEyMjAxN30.vXd5WBBpJgsPeTQRZRcWOzbKJ0uQULyrCPiMlfyKr6A';
       let supabaseClient;
+      const basePrice = 2.00; // ← your starting price per plot (adjust as needed)
+
       try {
         supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
         console.log('Supabase client initialized.');
+
       } catch (initErr) {
         console.error('Failed to initialize Supabase client:', initErr);
         // Prevent form submission if initialization fails
@@ -240,13 +243,32 @@
       updateTimer();
       const timerInterval = setInterval(updateTimer, 1000);
 
-      // 7) Compute and render “Plots” count and total (price-per-plot = $0)
+      // 7) Compute and render “Plots” count and total using dynamic pricing
       const count = expectedCount;
       document.getElementById('count-display').textContent = count;
       console.log('Selected plots count =', count);
 
-      const pricePerPlot = 0;
-      const total = count * pricePerPlot;
+      // Determine how many cells have sold so far (same logic as index.html)
+      // Fetch all paid uploads (min_r, max_r, min_c, max_c) and count cells:
+      const { data: paidUploads } = await supabaseClient
+        .from('uploads')
+        .select('min_r, max_r, min_c, max_c')
+        .eq('paid', true);
+
+      let soldCells = 0;
+      paidUploads.forEach(u => {
+        soldCells += (u.max_r - u.min_r + 1) * (u.max_c - u.min_c + 1);
+      });
+
+      // Calculate blocks of 10 and surcharge
+      const blocksSold = Math.floor(soldCells / 10);
+      const surcharge = blocksSold * 0.5;
+
+      // Final price per plot = basePrice + surcharge
+      const currentPrice = basePrice + surcharge;
+
+      // Now compute total
+      const total = count * currentPrice;
       document.getElementById('total-display').textContent = total.toFixed(2);
       console.log('Total charge =', total.toFixed(2));
 
