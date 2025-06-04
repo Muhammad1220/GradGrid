@@ -166,13 +166,13 @@
       /* no background here—grid itself will handle the image */
     }
 
-    /* RESPONSIVE SQUARE GRID + BACKGROUND IMAGE (fits entirely within wrapper) */
+    /* RESPONSIVE SQUARE GRID + BACKGROUND IMAGE (always fully visible on any viewport) */
     .canvas-container {
-      aspect-ratio: 1 / 1;               /* Always a perfect square */
-      max-width: 100%;                   /* Never exceed wrapper’s width */
-      max-height: 100%;                  /* Never exceed wrapper’s height (viewport minus navbar) */
-      width: auto;                       /* Let the square shrink to fit */
-      height: auto;
+      aspect-ratio: 1 / 1;                                  /* Always a perfect square */
+      width: 100vw;                                         /* Fill full viewport width */
+      height: calc(100vh - var(--nav-height));              /* Fill all height under the navbar */
+      max-width: calc(100vh - var(--nav-height));           /* Cap width so the square never exceeds available height */
+      max-height: calc(100vh - var(--nav-height));          /* Cap height so it never exceeds available height */
 
       display: grid;
       grid-template-columns: repeat(20, 1fr);
@@ -185,7 +185,7 @@
       position: relative;
       z-index: 1;
 
-      /* Background image “contains” itself inside the square */
+      /* Background image “contains” itself inside the square, never cropped */
       background: url("Background.png") center center / contain no-repeat, var(--white);
     }
 
