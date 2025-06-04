@@ -406,7 +406,17 @@
   </div>
 
   <!-- GRID CANVAS -->
-  <div class="canvas-container" id="canvas"></div>
+  <div id="main-area" style="margin-top: var(--nav-height); display: flex;">
+    <div id="sidebar" style="width: 200px;">
+      <p>1. Click “Buy Plot” to start.</p>
+      <p>2. Drag (or tap+swipe) to select squares.</p>
+      <p>3. Upload your image or message.</p>
+      <p>4. Complete payment (10-minute timer).</p>
+    </div>
+    <div id="canvas-wrapper" style="flex: 1; position: relative;">
+      <div class="canvas-container" id="canvas" style="width: min(calc(100vw - 200px), calc(100vh - var(--nav-height))); height: min(calc(100vw - 200px), calc(100vh - var(--nav-height)));"></div>
+    </div>
+  </div>
 
   <!-- GALLERY MODAL -->
   <div class="gallery-modal" id="gallery-modal" aria-hidden="true" role="dialog" aria-label="Gallery of Uploads">
