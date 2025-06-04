@@ -153,11 +153,30 @@
       z-index: 9;
     }
 
-    /* Grid Canvas: fits exactly beneath navbar, no overflow */
+    /* Main area: sidebar + grid */
+    #main-area {
+      display: flex;
+      margin-top: var(--nav-height);
+      height: calc(100vh - var(--nav-height));
+    }
+    #sidebar {
+      width: 200px;
+      overflow-y: auto;
+      display: block;
+    }
+    #canvas-wrapper {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Grid Canvas: fits in remaining space beside sidebar */
     .canvas-container {
-      --size: min(100vw, calc(100vh - var(--nav-height)));
+      --size: min(calc(100vw - 200px), calc(100vh - var(--nav-height)));
       position: absolute;
-      top: var(--nav-height);
+      top: 0;
       left: 0;
       right: 0;
       bottom: 0;
@@ -175,6 +194,11 @@
 
     .canvas-container.select-mode {
       background: var(--white) !important;
+    }
+
+    /* Sidebar hide/show */
+    #sidebar.hidden {
+      display: none;
     }
 
     .canvas-cell {
@@ -604,12 +628,14 @@
     document.getElementById('home-btn').onclick = () => {
       isSelecting = false; isMouseDown = false;
       canvas.classList.remove('select-mode');
+      document.getElementById('sidebar').classList.remove('hidden');
       instructions.style.display = selBar.style.display = 'none';
       clearSelection(); renderGrid();
     };
     document.getElementById('clear-grid-btn').onclick = () => {
       isSelecting = false; isMouseDown = false;
       canvas.classList.remove('select-mode');
+      document.getElementById('sidebar').classList.remove('hidden');
       instructions.style.display = selBar.style.display = 'none';
       clearSelection(); renderGrid();
     };
@@ -618,6 +644,7 @@
       document.getElementById('count-modal').style.display = 'none';
       isSelecting = true;
       canvas.classList.add('select-mode');
+      document.getElementById('sidebar').classList.add('hidden');
       instructions.style.display = 'block';
       selBar.style.display = 'none';
       instructions.textContent = `Select: ${requiredCount} plot${requiredCount > 1 ? 's' : ''}.`;
