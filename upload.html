@@ -247,7 +247,7 @@
     <div class="menu">
       <a href="index.html">Home</a>
       <a href="payment.html">Back to Payment</a>
-      <a href="index.html" onclick="window.openGallery(); return false;">Gallery of Uploads</a>
+      <a id="gallery-btn" href="index.html" onclick="window.openGallery(); return false;">Gallery of Uploads</a>
       <a href="faq.html">Help / FAQ</a>
     </div>
   </nav>
@@ -750,7 +750,7 @@
             blob = await fetch(gifImg.src).then((res) => res.blob());
             extension = "gif";
           } else {
-            if (!cropper) return alert("Please select & adjust an image.");
+            if (!cropper) return alert("Please select &adjust an image.");
             blob = await new Promise((resolve) =>
               cropper.getCroppedCanvas().toBlob(resolve)
             );
@@ -872,7 +872,17 @@
     });
   </script>
 
-
+  <!-- Insert openGallery helper here -->
+  <script>
+    window.openGallery = () => {
+      if (window.location.pathname.endsWith('index.html') || window.location.pathname === '/') {
+        const galleryContainer = document.getElementById('gallery-container');
+        if (galleryContainer) galleryContainer.classList.add('active');
+      } else {
+        window.location.href = 'index.html?showGallery=1';
+      }
+    };
+  </script>
 </body>
 
 </html>

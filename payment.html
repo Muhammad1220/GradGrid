@@ -113,7 +113,7 @@
     <div class="menu">
       <a href="index.html">Cancel</a>
       <a href="upload.html">Back to Upload</a>
-      <a href="index.html" onclick="window.openGallery(); return false;">Gallery of Uploads</a>
+      <a id="gallery-btn" href="index.html" onclick="window.openGallery(); return false;">Gallery of Uploads</a>
       <a href="faq.html">Help / FAQ</a>
     </div>
   </nav>
@@ -311,6 +311,18 @@
         window.location.href = `final.html?uploadId=${uploadId}`;
       });
     })();
+  </script>
+
+  <!-- Define openGallery helper so clicking “Gallery of Uploads” opens index.html’s overlay -->
+  <script>
+    window.openGallery = () => {
+      if (window.location.pathname.endsWith('index.html') || window.location.pathname === '/') {
+        const galleryContainer = document.getElementById('gallery-container');
+        if (galleryContainer) galleryContainer.classList.add('active');
+      } else {
+        window.location.href = 'index.html?showGallery=1';
+      }
+    };
   </script>
 </body>
 

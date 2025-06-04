@@ -139,9 +139,10 @@
         </div>
         <div class="menu">
             <a id="home-btn" href="index.html">Home</a>
-            <a id="buy-plot-btn" href="#">Buy Plot</a>
+            <!-- Updated: simply point back to index.html -->
+            <a id="buy-plot-btn" href="index.html">Buy Plot</a>
             <a id="gallery-btn" href="index.html" onclick="window.openGallery(); return false;">Gallery of Uploads</a>
-            <a id="clear-grid-btn" href="#">Clear Grid</a>
+            <a id="clear-grid-btn" href="index.html">Clear Grid</a>
             <a id="faq-btn" href="faq.html">Help / FAQ</a>
         </div>
     </nav>
@@ -196,6 +197,80 @@
         <a href="index.html" class="back-link">Back to Grid</a>
     </main>
 
+    <!-- 1) Load Supabase JS (v2 UMD build) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+    <script>
+        const SUPABASE_URL = 'https://ljvfdbrxelmqyufxifsg.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqdmZkYnJ4ZWxtcXl1ZnhpZnNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg1NDYwMTcsImV4cCI6MjA2NDEyMjAxN30.vXd5WBBpJgsPeTQRZRcWOzbKJ0uQULyrCPiMlfyKr6A';
+        let supabaseClient;
+        try {
+            supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        } catch (e) {
+            console.error('Failed to initialize Supabase on FAQ:', e);
+        }
+
+        async function updateNavCounts() {
+            // Same logic as index.html to compute sold/available/price:
+            const GRID_COLS = 20, GRID_ROWS = 30, TOTAL = GRID_COLS * GRID_ROWS;
+            const twentyMinAgo = new Date(Date.now() - 20 * 60 * 1000).toISOString();
+
+            // 1) Fetch all unexpired holds
+            const { data: holdRows } = await supabaseClient
+                .from('reservations')
+                .select('plot_row, plot_col')
+                .eq('paid', false)
+                .gte('reserved_at', twentyMinAgo);
+
+            const usedSet = new Set();
+            holdRows.forEach(r => {
+                usedSet.add(r.plot_row * GRID_COLS + r.plot_col);
+            });
+
+            // 2) Fetch all fully paid uploads
+            const { data: uploads } = await supabaseClient
+                .from('uploads')
+                .select('min_r, max_r, min_c, max_c')
+                .eq('paid', true);
+
+            uploads.forEach(u => {
+                for (let r = u.min_r; r <= u.max_r; r++) {
+                    for (let c = u.min_c; c <= u.max_c; c++) {
+                        usedSet.add(r * GRID_COLS + c);
+                    }
+                }
+            });
+
+            const soldCells = usedSet.size;
+            const blocksSold = Math.floor(soldCells / 10);
+            const surcharge = blocksSold * 0.5;
+            const basePrice = 2.00;
+            const currentPrice = basePrice + surcharge;
+
+            document.getElementById('sold-count').textContent = soldCells;
+            document.getElementById('avail-count').textContent = TOTAL - soldCells;
+            document.getElementById('price-count').textContent =
+                '$' + currentPrice.toFixed(2) + '/plot';
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            updateNavCounts();
+            setInterval(updateNavCounts, 5000);
+        });
+
+        // Exactly the same openGallery helper used on other pages:
+        window.openGallery = () => {
+            if (
+                window.location.pathname.endsWith('index.html') ||
+                window.location.pathname === '/'
+            ) {
+                const galleryContainer = document.getElementById('gallery-container');
+                if (galleryContainer) galleryContainer.classList.add('active');
+            } else {
+                window.location.href = 'index.html?showGallery=1';
+            }
+        };
+    </script>
 </body>
 
 </html>

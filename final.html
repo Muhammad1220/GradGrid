@@ -3,8 +3,8 @@
 
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Purchase Complete</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Confirm Your Reservation</title>
   <style>
     :root {
       --navy: #001f3f;
@@ -34,6 +34,7 @@
       color: var(--white);
       display: flex;
       align-items: center;
+      justify-content: space-between;
       padding: 0 1.5rem;
     }
 
@@ -43,15 +44,22 @@
       color: var(--duck);
     }
 
+    .navbar a {
+      color: var(--white);
+      text-decoration: none;
+      margin-left: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
     main {
       flex: 1;
-      max-width: 500px;
+      max-width: 400px;
       margin: 2rem auto;
       background: var(--white);
       padding: 2rem;
       border-radius: 8px;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      text-align: center;
     }
 
     h2 {
@@ -64,9 +72,30 @@
       font-size: 1rem;
     }
 
-    #done-btn {
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
       margin-top: 1.5rem;
-      padding: 0.75rem 1.5rem;
+    }
+
+    label {
+      display: flex;
+      flex-direction: column;
+      font-weight: bold;
+      font-size: 0.95rem;
+    }
+
+    input {
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 1rem;
+      margin-top: 0.25rem;
+    }
+
+    button {
+      padding: 0.75rem;
       background: var(--duck);
       color: var(--white);
       border: none;
@@ -79,101 +108,221 @@
 
 <body>
 
-  <!-- NAVBAR -->
   <nav class="navbar">
     <div class="brand">GradGrid 2025</div>
     <div class="menu">
-      <a href="index.html">Home</a>
-      <a href="index.html" onclick="window.openGallery(); return false;">Gallery of Uploads</a>
+      <a href="index.html">Cancel</a>
+      <a href="upload.html">Back to Upload</a>
+      <!-- Updated: added id="gallery-btn" -->
+      <a id="gallery-btn" href="index.html" onclick="window.openGallery(); return false;">Gallery of Uploads</a>
       <a href="faq.html">Help / FAQ</a>
     </div>
   </nav>
 
   <main>
-    <h2>Purchase Complete!</h2>
-    <div class="summary" id="summary">
-      <!-- We’ll populate this via JavaScript -->
+    <div class="summary">
+      <h2>Confirm Your Reservation</h2>
+      <p>
+        <strong>Plots:</strong>
+        <span id="count-display">0</span>
+      </p>
+      <p>
+        <strong>Total:</strong>
+        $<span id="total-display">0.00</span>
+      </p>
+      <!-- **NEW: Time Remaining Display** -->
+      <p>
+        <strong>Time Remaining:</strong>
+        <span id="timer-display">20:00</span>
+      </p>
     </div>
-    <button id="done-btn">Confirm Payment</button>
+
+    <form id="pay-form">
+      <label>
+        Cardholder Name
+        <input type="text" id="card-name" placeholder="Jane Doe" required>
+      </label>
+      <label>
+        Card Number
+        <input type="text" id="card-number" maxlength="19" placeholder="1234 5678 9012 3456" required>
+      </label>
+      <label>
+        Expiry (MM/YY)
+        <input type="text" id="card-expiry" maxlength="5" placeholder="08/24" required>
+      </label>
+      <label>
+        CVC
+        <input type="text" id="card-cvc" maxlength="3" placeholder="123" required>
+      </label>
+      <button type="submit">Pay Now</button>
+    </form>
   </main>
 
-  <!-- 1) Load Supabase JS library (v2 UMD build) -->
+  <!-- 1) Load Supabase JS library BEFORE any code that uses `supabase` -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <!-- 2) Initialize Supabase client and handle Confirm Payment -->
+
   <script>
-    // Replace these with your actual Supabase project URL & anon key:
-    const SUPABASE_URL = 'https://ljvfdbrxelmqyufxifsg.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqdmZkYnJ4ZWxtcXl1ZnhpZnNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg1NDYwMTcsImV4cCI6MjA2NDEyMjAxN30.vXd5WBBpJgsPeTQRZRcWOzbKJ0uQULyrCPiMlfyKr6A';
-    try {
-      window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      console.log('Final.html: Supabase initialized.');
-    } catch (err) {
-      console.error('Final.html: Failed to initialize Supabase:', err);
-    }
+    (async function initPayment() {
+      console.log('--- payment.html script starting ---');
 
-    // 3) Read reservation details from localStorage (for summary display)
-    const res = JSON.parse(localStorage.getItem('gradgrid-reservation') || '{}');
+      // 2) Initialize Supabase client
+      const SUPABASE_URL = 'https://ljvfdbrxelmqyufxifsg.supabase.co';
+      const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqdmZkYnJ4ZWxtcXl1ZnhpZnNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg1NDYwMTcsImV4cCI6MjA2NDEyMjAxN30.vXd5WBBpJgsPeTQRZRcWOzbKJ0uQULyrCPiMlfyKr6A';
+      let supabaseClient;
+      const basePrice = 2.00; // ← your starting price per plot (adjust as needed)
 
-    // Helper to convert row index to a letter (e.g. 0 → A, 1 → B, etc.)
-    function toLetter(n) {
-      return String.fromCharCode(65 + n);
-    }
-
-    // Build human-readable “Rows A–C, Cols 2–4” style text
-    const rowLabel = (res.minR === res.maxR)
-      ? toLetter(res.minR)
-      : `${toLetter(res.minR)}–${toLetter(res.maxR)}`;
-    const colLabel = (res.minC === res.maxC)
-      ? (res.minC + 1)
-      : `${res.minC + 1}–${res.maxC + 1}`;
-
-    // Populate the summary div
-    document.getElementById('summary').innerHTML = `
-      <p><strong>Plots:</strong> Rows ${rowLabel}, Cols ${colLabel}</p>
-      <p><strong>Area:</strong> ${res.area || 0} plot(s)</p>
-      <p><strong>Card:</strong> •••• •••• •••• 1234</p>
-    `;
-
-    // 4) When “Confirm Payment” is clicked:
-    document.getElementById('done-btn').addEventListener('click', async () => {
-      console.log('Confirm Payment clicked');
-
-      // 4a) Get the uploadId from the URL (final.html?uploadId=43)
-      const params = new URLSearchParams(window.location.search);
-      const uploadId = params.get('uploadId');
-      console.log('Parsed uploadId =', uploadId);
-      if (!uploadId) {
-        alert('Missing uploadId. Please retry.');
+      try {
+        supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+        console.log('Supabase client initialized.');
+      } catch (initErr) {
+        console.error('Failed to initialize Supabase client:', initErr);
+        // Prevent form submission if initialization fails
+        document.getElementById('pay-form').addEventListener('submit', e => e.preventDefault());
         return;
       }
 
-      // 4b) Flip paid = true for that row in Supabase
-      try {
-        console.log('Calling Supabase to update paid flag…');
-        const { data, error: dbErr } = await supabase
+      // 3) Parse uploadId from URL
+      const params = new URLSearchParams(window.location.search);
+      const uploadId = params.get('uploadId');
+      if (!uploadId) {
+        alert('Missing uploadId. Please retry.');
+        window.location.href = 'index.html';
+        return;
+      }
+
+      // 4) Fetch the uploads row to confirm it exists and isn’t already paid
+      const { data: uploadRow, error: uploadErr } = await supabaseClient
+        .from('uploads')
+        .select('min_r, max_r, min_c, max_c, paid')
+        .eq('id', uploadId)
+        .single();
+      if (uploadErr || !uploadRow) {
+        alert('Unable to find that reservation. Please start over.');
+        window.location.href = 'index.html';
+        return;
+      }
+      if (uploadRow.paid) {
+        // Already paid → go straight to final
+        window.location.href = `final.html?uploadId=${uploadId}`;
+        return;
+      }
+
+      // 5) Verify holds are still valid (unpaid & unexpired) and fetch reserved_at
+      const twentyMinAgo = new Date(Date.now() - 20 * 60 * 1000).toISOString();
+      const { data: resRows, error: resErr } = await supabaseClient
+        .from('reservations')
+        .select('plot_row, reserved_at')
+        .eq('upload_id', uploadId)
+        .eq('paid', false)
+        .gte('reserved_at', twentyMinAgo);
+      const expectedCount = (uploadRow.max_r - uploadRow.min_r + 1) * (uploadRow.max_c - uploadRow.min_c + 1);
+      if (resErr || !resRows || resRows.length !== expectedCount) {
+        alert('Your hold has expired or is invalid. Please start over.');
+        window.location.href = 'index.html';
+        return;
+      }
+
+      // 6) Compute countdown based on the earliest reserved_at
+      const reservedAt = new Date(resRows[0].reserved_at);
+      const expiresAt = new Date(reservedAt.getTime() + 20 * 60 * 1000);
+
+      function updateTimer() {
+        const now = new Date();
+        const diffMs = expiresAt - now;
+        if (diffMs <= 0) {
+          alert('Your hold has expired. Returning to grid.');
+          window.location.href = 'index.html?expired=true';
+          return;
+        }
+        const totalSeconds = Math.floor(diffMs / 1000);
+        const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+        const seconds = String(totalSeconds % 60).padStart(2, '0');
+        document.getElementById('timer-display').textContent = `${minutes}:${seconds}`;
+      }
+      // Start the timer loop
+      updateTimer();
+      const timerInterval = setInterval(updateTimer, 1000);
+
+      // 7) Compute and render “Plots” count and total using dynamic pricing
+      const count = expectedCount;
+      document.getElementById('count-display').textContent = count;
+      console.log('Selected plots count =', count);
+
+      // Determine how many cells have sold so far (same logic as index.html)
+      // Fetch all paid uploads (min_r, max_r, min_c, max_c) and count cells:
+      const { data: paidUploads } = await supabaseClient
+        .from('uploads')
+        .select('min_r, max_r, min_c, max_c')
+        .eq('paid', true);
+
+      let soldCells = 0;
+      paidUploads.forEach(u => {
+        soldCells += (u.max_r - u.min_r + 1) * (u.max_c - u.min_c + 1);
+      });
+
+      // Calculate blocks of 10 and surcharge
+      const blocksSold = Math.floor(soldCells / 10);
+      const surcharge = blocksSold * 0.5;
+
+      // Final price per plot = basePrice + surcharge
+      const currentPrice = basePrice + surcharge;
+
+      // Now compute total
+      const total = count * currentPrice;
+      document.getElementById('total-display').textContent = total.toFixed(2);
+      console.log('Total charge =', total.toFixed(2));
+
+      // 8) Handle form submission: mark paid=true on upload & reservations, then redirect
+      document.getElementById('pay-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        console.log('Pay Now clicked');
+
+        // 8a) Validate Cardholder Name
+        const cardName = document.getElementById('card-name').value.trim();
+        console.log('Cardholder name entered:', cardName);
+        if (!cardName) {
+          alert('Please enter cardholder name.');
+          return;
+        }
+
+        // 8b) Mark uploads.paid = true
+        const { error: updUploadErr } = await supabaseClient
           .from('uploads')
           .update({ paid: true })
           .eq('id', uploadId);
-
-        if (dbErr) {
-          console.error('Supabase.update returned error:', dbErr);
-          alert('Could not confirm payment; please try again.');
+        if (updUploadErr) {
+          console.error('Error marking upload as paid:', updUploadErr);
+          alert('Payment succeeded but failed to update database. Contact support.');
           return;
         }
-        console.log('Supabase.update succeeded:', data);
-      } catch (updateError) {
-        console.error('Exception when calling Supabase.update:', updateError);
-        alert('Could not confirm payment; please try again.');
-        return;
-      }
 
-      // 4c) Clear reservation from localStorage and go back home
-      localStorage.removeItem('gradgrid-requiredCount');
-      localStorage.removeItem('gradgrid-reservation');
-      localStorage.removeItem('gradgrid-payment');
-      console.log('Redirecting to index.html');
-      window.location.href = 'index.html';
-    });
+        // 8c) Mark reservations.paid = true for this uploadId
+        const { error: updResErr } = await supabaseClient
+          .from('reservations')
+          .update({ paid: true })
+          .eq('upload_id', uploadId);
+        if (updResErr) {
+          console.error('Error marking reservations as paid:', updResErr);
+          alert('Payment succeeded but failed to update reservations. Contact support.');
+          return;
+        }
+
+        // 8d) Redirect to final.html
+        window.location.href = `final.html?uploadId=${uploadId}`;
+      });
+    })();
+  </script>
+
+  <!-- Define openGallery helper so clicking “Gallery of Uploads” opens index.html’s overlay -->
+  <script>
+    window.openGallery = () => {
+      if (window.location.pathname.endsWith('index.html') || window.location.pathname === '/') {
+        const galleryContainer = document.getElementById('gallery-container');
+        if (galleryContainer) galleryContainer.classList.add('active');
+      } else {
+        window.location.href = 'index.html?showGallery=1';
+      }
+    };
   </script>
 </body>
 
