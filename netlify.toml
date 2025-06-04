@@ -1,0 +1,8 @@
+[build]
+  # No build command needed (all files are static), so leave `command` empty
+  command = ""
+  publish = "."
+
+[functions]
+  # Tells Netlify where your Lambda functions live
+  directory = "netlify/functions"
