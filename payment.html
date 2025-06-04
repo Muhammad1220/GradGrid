@@ -159,16 +159,54 @@
         return;
       }
 
-      // 3) Fetch and display how many plots were chosen
-      const count = parseInt(localStorage.getItem('gradgrid-requiredCount') || '1', 10);
+      // 3) Parse uploadId from URL and verify upload + holds in Supabase
+      const params   = new URLSearchParams(window.location.search);
+      const uploadId = params.get('uploadId');
+      if (!uploadId) {
+        alert('Missing uploadId. Please retry.');
+        window.location.href = 'index.html';
+        return;
+      }
+
+      // 4) Fetch the uploads row to confirm it exists and isn’t already paid
+      const { data: uploadRow, error: uploadErr } = await supabaseClient
+        .from('uploads')
+        .select('min_r, max_r, min_c, max_c, paid')
+        .eq('id', uploadId)
+        .single();
+      if (uploadErr || !uploadRow) {
+        alert('Unable to find that reservation. Please start over.');
+        window.location.href = 'index.html';
+        return;
+      }
+      if (uploadRow.paid) {
+        // Already paid → go straight to final
+        window.location.href = `final.html?uploadId=${uploadId}`;
+        return;
+      }
+
+      // 5) Verify holds are still valid (unpaid & unexpired) for this uploadId
+      const twentyMinAgo = new Date(Date.now() - 20 * 60 * 1000).toISOString();
+      const { data: resRows, error: resErr } = await supabaseClient
+        .from('reservations')
+        .select('plot_row')
+        .eq('upload_id', uploadId)
+        .eq('paid', false)
+        .gte('reserved_at', twentyMinAgo);
+      // Number of cells in rectangle:
+      const expectedCount = (uploadRow.max_r - uploadRow.min_r + 1) * (uploadRow.max_c - uploadRow.min_c + 1);
+      if (resErr || !resRows || resRows.length !== expectedCount) {
+        alert('Your hold has expired or is invalid. Please start over.');
+        window.location.href = 'index.html';
+        return;
+      }
+
+      // 6) Compute and render “Plots” count and total ($0.00 since price-per-plot is fixed at $0)
+      const count = expectedCount;
       document.getElementById('count-display').textContent = count;
       console.log('Selected plots count =', count);
 
-      // 4) Grab stored reservation data (includes price per plot)
-      const reservation  = JSON.parse(localStorage.getItem('gradgrid-reservation') || '{}');
-      const pricePerPlot = Number(reservation.price) || 0;
-
-      // 5) Calculate and render the total
+      const pricePerPlot = 0;
       const total = count * pricePerPlot;
       document.getElementById('total-display').textContent = total.toFixed(2);
       console.log('Total charge =', total.toFixed(2));
@@ -195,8 +233,30 @@
           return;
         }
 
-        // 6c) Redirect to final.html so that page can mark paid = true
-        console.log('Redirecting to final.html for confirmation');
+        // 6c) First mark paid = true on both uploads and reservations, then redirect
+        //   i. Mark uploads.paid = true
+        const { error: updUploadErr } = await supabaseClient
+          .from('uploads')
+          .update({ paid: true })
+          .eq('id', uploadId);
+        if (updUploadErr) {
+          console.error('Error marking upload as paid:', updUploadErr);
+          alert('Payment succeeded but failed to update database. Contact support.');
+          return;
+        }
+
+        //   ii. Mark reservations.paid = true for this uploadId
+        const { error: updResErr } = await supabaseClient
+          .from('reservations')
+          .update({ paid: true })
+          .eq('upload_id', uploadId);
+        if (updResErr) {
+          console.error('Error marking reservations as paid:', updResErr);
+          alert('Payment succeeded but failed to update reservations. Contact support.');
+          return;
+        }
+
+        //   iii. Redirect to final.html
         window.location.href = `final.html?uploadId=${uploadId}`;
       });
 
