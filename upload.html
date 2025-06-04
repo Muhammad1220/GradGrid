@@ -635,22 +635,62 @@
 
         // 2. Upload blob to Supabase Storage
         const fileName = `upload-${Date.now()}.${extension}`;
-        const { data: storageData, error: upErr } = await supabase
+        // 2. Check bucket usage before uploading anything
+        const { data: usageData, error: usageErr } = await supabase
           .storage
           .from('uploads')
-          .upload(
-            `public/${fileName}`,
-            blob,
-            {
-              cacheControl: '3600',
-              upsert:      false,
-              contentType: blob.type
-            }
-          );
-        if (upErr) {
-          alert('Storage upload error: ' + upErr.message);
+          .getBucketUsage();
+        if (usageErr) {
+          alert('Could not retrieve bucket usage: ' + usageErr.message);
           return;
         }
+        const usedBytes = usageData.usage;
+        const planLimit = 1 * 1024 * 1024 * 1024;
+
+        if (usedBytes + blob.size > planLimit) {
+          alert('Cannot upload—project storage quota reached.');
+          return;
+        }
+
+        let uploadResponse;
+        if (blob.size <= 6 * 1024 * 1024) {
+          // Small files (≤ 6 MB): use standard single-shot upload
+          uploadResponse = await supabase
+            .storage
+            .from('uploads')
+            .upload(
+              `public/${fileName}`,
+              blob,
+              {
+                cacheControl: '3600',
+                upsert:      false,
+                contentType: blob.type
+              }
+            );
+        } else {
+          // Large files (> 6 MB): switch to resumable/TUS flow
+          uploadResponse = await supabase
+            .storage
+            .from('uploads')
+            .createResumableUpload(
+              `public/${fileName}`,
+              blob,
+              {
+                chunkSize: 5 * 1024 * 1024, // 5 MiB per chunk
+                onProgress: (progressEvent) => {
+                  const percent = Math.round((progressEvent.loaded / progressEvent.total) * 100);
+                  showToast(`Uploading: ${percent}%`, 'info');
+                }
+              }
+            );
+        }
+
+        if (uploadResponse.error) {
+          alert('Storage upload error: ' + uploadResponse.error.message);
+          return;
+        }
+        const storageData = uploadResponse.data;
+
 
         // 3. Get the public URL
         const filePath = storageData.path;
