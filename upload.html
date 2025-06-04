@@ -383,10 +383,8 @@
       }, 3000);
     }
 
-    document.addEventListener("DOMContentLoaded", () => {
-      const reservation = JSON.parse(
-        localStorage.getItem("gradgrid-reservation") || "{}"
-      );
+    document.addEventListener("DOMContentLoaded", async () => {
+      // Grab all DOM elements & state
       const infoEl = document.getElementById("plot-info");
       const uploadForm = document.getElementById("upload-form");
       const imageGroup = document.getElementById("image-group");
@@ -401,9 +399,7 @@
       const textPreview = document.getElementById("text-preview");
       const fontSelect = document.getElementById("font-select");
       const colorPicker = document.getElementById("text-color-picker");
-      const highlightPicker = document.getElementById(
-        "highlight-color-picker"
-      );
+      const highlightPicker = document.getElementById("highlight-color-picker");
       const boldBtn = document.getElementById("bold-btn");
       const italicBtn = document.getElementById("italic-btn");
       const underlineBtn = document.getElementById("underline-btn");
@@ -419,40 +415,62 @@
         tColor = "#ffffff",
         tHighlight = "#000000";
 
-      // Reservation check
-      if (reservation.minR == null) {
+      // Reservation check via Supabase & URL params
+      const urlParams = new URLSearchParams(window.location.search);
+      const minR = parseInt(urlParams.get("minR"), 10);
+      const maxR = parseInt(urlParams.get("maxR"), 10);
+      const minC = parseInt(urlParams.get("minC"), 10);
+      const maxC = parseInt(urlParams.get("maxC"), 10);
+      if ([minR, maxR, minC, maxC].some((v) => isNaN(v))) {
         infoEl.innerHTML =
-          '<p style="color:red">No reservation found. Please start over.</p>';
+          '<p style="color:red">Invalid hold parameters. Please start over.</p>';
         uploadForm.style.display = "none";
         document.getElementById("preview").style.display = "none";
         return;
       }
-      const w = reservation.maxC - reservation.minC + 1;
-      const h = reservation.maxR - reservation.minR + 1;
+      // Verify unexpired holds in Supabase
+      const twentyMinAgo = new Date(Date.now() - 20 * 60 * 1000).toISOString();
+      const { data: holdRows, error: holdError } = await supabase
+        .from("reservations")
+        .select("*")
+        .eq("paid", false)
+        .gte("reserved_at", twentyMinAgo)
+        .gte("plot_row", minR)
+        .lte("plot_row", maxR)
+        .gte("plot_col", minC)
+        .lte("plot_col", maxC);
+      if (
+        holdError ||
+        holdRows.length !== (maxR - minR + 1) * (maxC - minC + 1)
+      ) {
+        window.location.href = "index.html?expired=true";
+        return;
+      }
+      // Compute aspect ratio & display “Plot: Rows …, Cols …”
+      const w = maxC - minC + 1;
+      const h = maxR - minR + 1;
       window.plotRatio = w / h;
-      const row = (n) => String.fromCharCode(65 + n);
-      const rows =
-        reservation.minR === reservation.maxR
-          ? row(reservation.minR)
-          : `${row(reservation.minR)}–${row(reservation.maxR)}`;
-      const cols =
-        reservation.minC === reservation.maxC
-          ? reservation.minC + 1
-          : `${reservation.minC + 1}–${reservation.maxC + 1}`;
-      infoEl.textContent = `Plot: Rows ${rows}, Cols ${cols}`;
+      const rowLabel = (n) => String.fromCharCode(65 + n);
+      const rowsText =
+        minR === maxR
+          ? rowLabel(minR)
+          : `${rowLabel(minR)}–${rowLabel(maxR)}`;
+      const colsText =
+        minC === maxC ? minC + 1 : `${minC + 1}–${maxC + 1}`;
+      infoEl.textContent = `Plot: Rows ${rowsText}, Cols ${colsText}`;
+      // Store for later use in submission
+      window.reservation = { minR, maxR, minC, maxC };
 
-      // Already uploaded?
-      const uploads = JSON.parse(
-        localStorage.getItem("gradgrid-uploads") || "[]"
-      );
-      const already = uploads.some(
-        (u) =>
-          u.minR === reservation.minR &&
-          u.maxR === reservation.maxR &&
-          u.minC === reservation.minC &&
-          u.maxC === reservation.maxC
-      );
-      if (already) {
+      // Already uploaded? (check “uploads” table)
+      const { data: existingUpload, error: existingError } = await supabase
+        .from("uploads")
+        .select("id")
+        .eq("min_r", minR)
+        .eq("max_r", maxR)
+        .eq("min_c", minC)
+        .eq("max_c", maxC)
+        .single();
+      if (existingError === null && existingUpload) {
         infoEl.insertAdjacentHTML(
           "afterend",
           '<div class="already-uploaded">You’ve already uploaded content for this plot.</div>'
@@ -467,72 +485,7 @@
 
         const resetBtn = document.getElementById("reset-upload");
         resetBtn.addEventListener("click", () => {
-          if (!confirm("Are you sure you want to replace your upload?"))
-            return;
-
-          // Remove stored entry
-          const arr = JSON.parse(
-            localStorage.getItem("gradgrid-uploads") || "[]"
-          );
-          const filtered = arr.filter(
-            (u) =>
-              !(
-                u.minR === reservation.minR &&
-                u.maxR === reservation.maxR &&
-                u.minC === reservation.minC &&
-                u.maxC === reservation.maxC
-              )
-          );
-          localStorage.setItem("gradgrid-uploads", JSON.stringify(filtered));
-
-          // Tear down cropper
-          if (cropper) {
-            cropper.destroy();
-            cropper = null;
-          }
-          originalType = "";
-
-          // Clear & hide final preview
-          finalPreview
-            .querySelectorAll("img, .gif-crop-container")
-            .forEach((el) => el.remove());
-          finalPreview.style.display = "none";
-
-          // Reset text mode
-          textInput.value = "";
-          textControls.style.display = "none";
-          textPreview.style.display = "none";
-          tFont = "Arial";
-          tSize = 68;
-          tBold = false;
-          tItalic = false;
-          tUnder = false;
-          tColor = "#ffffff";
-          tHighlight = "#000000";
-          boldBtn.classList.remove("active");
-          italicBtn.classList.remove("active");
-          underlineBtn.classList.remove("active");
-
-          // Restore default mode
-          document.querySelector(
-            'input[name="type"][value="image"]'
-          ).checked = true;
-          imageGroup.style.display = "block";
-          textGroup.style.display = "none";
-          cropContainer.style.display = "none";
-          cropControls.style.display = "none";
-
-          // Clear inputs
-          document.getElementById("image-input").value = "";
-          const linkInput = document.getElementById("link-input");
-          if (linkInput) linkInput.value = "";
-
-          // Remove banner & button
-          banner.remove();
-          resetBtn.remove();
-
-          // Focus first field
-          document.getElementById("image-input").focus();
+          window.location.href = `upload.html?minR=${minR}&maxR=${maxR}&minC=${minC}&maxC=${maxC}`;
         });
 
         return;
@@ -855,10 +808,10 @@
               url: publicUrl,
               type: type,
               content: textContent,
-              min_r: reservation.minR,
-              max_r: reservation.maxR,
-              min_c: reservation.minC,
-              max_c: reservation.maxC,
+              min_r: minR,
+              max_r: maxR,
+              min_c: minC,
+              max_c: maxC,
               link: link || null,
               uploader_name: uploaderName,
               paid: false,
@@ -869,48 +822,27 @@
         if (dbErr) return alert("Database insert error: " + dbErr.message);
         const uploadId = insertedData.id;
 
-        // 5. Success!
+        // 5. Link all unexpired holds in reservations → this uploadId
+        const twentyMinAgo2 = new Date(Date.now() - 20 * 60 * 1000).toISOString();
+        const { error: updateErr } = await supabase
+          .from("reservations")
+          .update({ upload_id: uploadId })
+          .eq("paid", false)
+          .gte("reserved_at", twentyMinAgo2)
+          .gte("plot_row", minR)
+          .lte("plot_row", maxR)
+          .gte("plot_col", minC)
+          .lte("plot_col", maxC);
+        if (updateErr) console.error("Error linking reservations:", updateErr);
+
+        // 6. Redirect to payment
         alert("Upload successful! Redirecting to payment…");
         window.location.href = `payment.html?uploadId=${uploadId}`;
       });
     });
   </script>
 
-  <!-- RELEASE-ON-LEAVE LOGIC -->
-  <script>
-    // track if the form was successfully submitted
-    let uploadConfirmed = false;
-    const form = document.getElementById("upload-form");
-    form.addEventListener("submit", () => {
-      uploadConfirmed = true;
-    });
 
-    // before unloading, if not confirmed, release the reserved plots
-    window.addEventListener("beforeunload", () => {
-      if (!uploadConfirmed) {
-        const reservation = JSON.parse(
-          localStorage.getItem("gradgrid-reservation") || "{}"
-        );
-        if (reservation.minR != null) {
-          const stillReserved = JSON.parse(
-            localStorage.getItem("gradgrid-reserved") || "[]"
-          ).filter(
-            (cell) =>
-              cell.r < reservation.minR ||
-              cell.r > reservation.maxR ||
-              cell.c < reservation.minC ||
-              cell.c > reservation.maxC
-          );
-          localStorage.setItem(
-            "gradgrid-reserved",
-            JSON.stringify(stillReserved)
-          );
-          localStorage.removeItem("gradgrid-reservation");
-          localStorage.removeItem("gradgrid-requiredCount");
-        }
-      }
-    });
-  </script>
 </body>
 
 </html>

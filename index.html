@@ -453,15 +453,39 @@
     // —— Helpers —— 
     const idxToRC = i => ({ row: Math.floor(i / GRID_COLS), col: i % GRID_COLS });
     const cellIndex = el => cells.indexOf(el);
-    const getReserved = () => JSON.parse(localStorage.getItem('gradgrid-reserved') || '[]');
-    const getUploads = () => window.cloudUploads || JSON.parse(localStorage.getItem('gradgrid-uploads') || '[]');
+
+    // — Replace getReserved/localStorage → Supabase holds —
+    let activeHolds = new Set();
+    async function fetchActiveHolds() {
+      activeHolds.clear();
+      const twentyMinAgo = new Date(Date.now() - 20 * 60 * 1000).toISOString();
+      const { data, error } = await supabase
+        .from('reservations')
+        .select('plot_row, plot_col')
+        .eq('paid', false)
+        .gte('reserved_at', twentyMinAgo);
+      if (data) {
+        data.forEach(({ plot_row, plot_col }) => {
+          activeHolds.add(plot_row * GRID_COLS + plot_col);
+        });
+      } else {
+        console.error('fetchActiveHolds error:', error);
+      }
+    }
+
+    // — Replace getUploads/localStorage → just use cloudUploads if present —
+    const getUploads = () => window.cloudUploads || [];
 
     // —— Render grid & uploads —— 
-    function renderGrid() {
-      // Clear previous
+    async function renderGrid() {
+      // 1. Refresh “activeHolds” from Supabase
+      await fetchActiveHolds();
+
+      // 2. Clear previous uploads and reset all cells
       document.querySelectorAll('.canvas-upload').forEach(e => e.remove());
       cells.forEach(c => c.className = 'canvas-cell');
 
+      // 3. Draw sold uploads (paid=true) as before
       if (!isSelecting) {
         getUploads().forEach(u => {
           let container;
@@ -501,9 +525,9 @@
         });
       }
 
+      // 4. When selecting, combine “activeHolds” + sold uploads to block cells
       if (isSelecting) {
-        const used = new Set();
-        getReserved().forEach(rc => used.add(rc.r * GRID_COLS + rc.c));
+        const used = new Set(activeHolds);
         getUploads().forEach(u => {
           for (let r = u.min_r; r <= u.max_r; r++)
             for (let c = u.min_c; c <= u.max_c; c++)
@@ -514,9 +538,8 @@
         });
       }
 
-      // Update counters
-      const allUsed = new Set();
-      getReserved().forEach(rc => allUsed.add(rc.r * GRID_COLS + rc.c));
+      // 5. Update counters
+      const allUsed = new Set(activeHolds);
       getUploads().forEach(u => {
         for (let r = u.min_r; r <= u.max_r; r++)
           for (let c = u.min_c; c <= u.max_c; c++)
@@ -590,46 +613,55 @@
       renderGrid();
     };
 
-    // —— Confirm selection —— 
-    confirmBtn.onclick = () => {
+    // —— Confirm selection (Supabase) —— 
+    confirmBtn.onclick = async () => {
       if (confirmBtn.disabled) return;
-      const existing = getReserved();
-      const occupied = new Set(existing.map(rc => rc.r * GRID_COLS + rc.c));
+
+      // 1. Fetch existing unexpired holds from Supabase
+      const twentyMinAgo = new Date(Date.now() - 20 * 60 * 1000).toISOString();
+      const { data: existingRows, error: fetchError } = await supabase
+        .from('reservations')
+        .select('plot_row, plot_col')
+        .eq('paid', false)
+        .gte('reserved_at', twentyMinAgo);
+      if (fetchError) {
+        console.error('Error fetching holds:', fetchError);
+        alert('Error checking current holds. Please try again.');
+        return;
+      }
+
+      // 2. Build a set of occupied indices
+      const occupied = new Set(existingRows.map(rc => rc.plot_row * GRID_COLS + rc.plot_col));
       const i1 = cellIndex(startCell), i2 = cellIndex(endCell);
       const { row: r1, col: c1 } = idxToRC(i1), { row: r2, col: c2 } = idxToRC(i2);
       const minR = Math.min(r1, r2), maxR = Math.max(r1, r2);
       const minC = Math.min(c1, c2), maxC = Math.max(c1, c2);
 
-      const newIndices = [];
-      for (let r = minR; r <= maxR; r++)
-        for (let c = minC; c <= maxC; c++)
-          newIndices.push(r * GRID_COLS + c);
-
-      for (const idx of newIndices) {
-        if (occupied.has(idx)) {
-          alert('Sorry—some of those plots were just taken. Please re-select.');
-          startCell = endCell = null;
-          clearSelection(); finalizeSelection(); renderGrid();
-          return;
+      // 3. Prepare new inserts—and check for conflicts
+      const inserts = [];
+      for (let r = minR; r <= maxR; r++) {
+        for (let c = minC; c <= maxC; c++) {
+          const idx = r * GRID_COLS + c;
+          if (occupied.has(idx)) {
+            alert('Sorry—some of those plots were just taken. Please re-select.');
+            startCell = endCell = null;
+            clearSelection(); finalizeSelection(); renderGrid();
+            return;
+          }
+          inserts.push({ plot_row: r, plot_col: c });
         }
       }
 
-      const reserved = existing.slice();
-      newIndices.forEach(idx => {
-        const { row, col } = idxToRC(idx);
-        reserved.push({ r: row, c: col });
-      });
-      localStorage.setItem('gradgrid-reserved', JSON.stringify(reserved));
-      localStorage.setItem('gradgrid-reservation', JSON.stringify({
-        minR, maxR, minC, maxC,
-        width: maxC - minC + 1,
-        height: maxR - minR + 1,
-        area: requiredCount,
-        price: 0
-      }));
+      // 4. Insert new holds into Supabase
+      const { error: insertError } = await supabase.from('reservations').insert(inserts);
+      if (insertError) {
+        console.error('Error creating holds:', insertError);
+        alert('Error reserving plots. Please try again.');
+        return;
+      }
 
       instructions.style.display = 'none';
-      window.location.href = 'upload.html';
+      window.location.href = `upload.html?minR=${minR}&maxR=${maxR}&minC=${minC}&maxC=${maxC}`;
     };
 
     // —— Drag-to-select (mouse + touch) —— 
