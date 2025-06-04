@@ -680,8 +680,6 @@
       }
       if (isDragging) {
         isDragging = false;
-        // One final update when drag ends:
-        renderGrid();
         if (refreshInterval) clearInterval(refreshInterval);
         // Only refresh when not dragging:
         refreshInterval = setInterval(() => {
