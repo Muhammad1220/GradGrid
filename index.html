@@ -153,36 +153,17 @@
       z-index: 9;
     }
 
-    /* Main area: sidebar + grid */
-    #main-area {
-      display: flex;
-      margin-top: var(--nav-height);
-      height: calc(100vh - var(--nav-height));
-    }
-    #sidebar {
-      width: 200px;
-      overflow-y: auto;
-      display: block;
-    }
-    #canvas-wrapper {
-      flex: 1;
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    /* Grid Canvas: fits in remaining space beside sidebar */
+    /* Grid Canvas: fits exactly beneath navbar, no overflow */
     .canvas-container {
-      --size: min(calc(100vw - 200px), calc(100vh - var(--nav-height)));
+      --size: min(100vw, calc(100vh - var(--nav-height)));
       position: absolute;
-      top: 0;
+      top: var(--nav-height);
       left: 0;
       right: 0;
       bottom: 0;
-      margin: auto;
       width: var(--size);
       height: var(--size);
+      margin: auto;
       display: grid;
       grid-template-columns: repeat(20, 1fr);
       grid-template-rows: repeat(30, 1fr);
@@ -194,11 +175,6 @@
 
     .canvas-container.select-mode {
       background: var(--white) !important;
-    }
-
-    /* Sidebar hide/show */
-    #sidebar.hidden {
-      display: none;
     }
 
     .canvas-cell {
@@ -429,18 +405,8 @@
     <button id="confirm-btn">Confirm</button>
   </div>
 
-  <!-- MAIN AREA -->
-  <div id="main-area">
-    <div id="sidebar">
-      <p>1. Click “Buy Plot” to start.</p>
-      <p>2. Drag (or tap+swipe) to select squares.</p>
-      <p>3. Upload your image or message.</p>
-      <p>4. Complete payment (10-minute timer).</p>
-    </div>
-    <div id="canvas-wrapper">
-      <div class="canvas-container" id="canvas"></div>
-    </div>
-  </div>
+  <!-- GRID CANVAS -->
+  <div class="canvas-container" id="canvas"></div>
 
   <!-- GALLERY MODAL -->
   <div class="gallery-modal" id="gallery-modal" aria-hidden="true" role="dialog" aria-label="Gallery of Uploads">
@@ -628,14 +594,12 @@
     document.getElementById('home-btn').onclick = () => {
       isSelecting = false; isMouseDown = false;
       canvas.classList.remove('select-mode');
-      document.getElementById('sidebar').classList.remove('hidden');
       instructions.style.display = selBar.style.display = 'none';
       clearSelection(); renderGrid();
     };
     document.getElementById('clear-grid-btn').onclick = () => {
       isSelecting = false; isMouseDown = false;
       canvas.classList.remove('select-mode');
-      document.getElementById('sidebar').classList.remove('hidden');
       instructions.style.display = selBar.style.display = 'none';
       clearSelection(); renderGrid();
     };
@@ -644,7 +608,6 @@
       document.getElementById('count-modal').style.display = 'none';
       isSelecting = true;
       canvas.classList.add('select-mode');
-      document.getElementById('sidebar').classList.add('hidden');
       instructions.style.display = 'block';
       selBar.style.display = 'none';
       instructions.textContent = `Select: ${requiredCount} plot${requiredCount > 1 ? 's' : ''}.`;
