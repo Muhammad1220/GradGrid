@@ -1,43 +1,75 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Gallery of Uploads</title>
   <style>
-    :root { --navy:#001f3f; --white:#ffffff; }
-    * { box-sizing:border-box; margin:0; padding:0; }
+    :root {
+      --navy: #001f3f;
+      --white: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
     body {
-      font-family:Arial,sans-serif;
-      background:var(--navy);
-      color:var(--white);
-      overflow:hidden;
+      font-family: Arial, sans-serif;
+      background: var(--navy);
+      color: var(--white);
+      overflow: hidden;
     }
+
     .gallery-container {
-      position:fixed; top:0; left:0; right:0; bottom:0;
-      display:flex; align-items:center; justify-content:center;
-      background:rgba(0,0,0,0.9); z-index:100;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.9);
+      z-index: 100;
     }
+
     .gallery-content {
-      position:relative;
-      width:90%; max-width:900px;
-      height:90%; max-height:90%;
-      overflow:hidden;
+      position: relative;
+      width: 90%;
+      max-width: 900px;
+      height: 90%;
+      max-height: 90%;
+      overflow: hidden;
     }
+
     .slide {
-      display:none;
-      flex-direction:column;
-      align-items:center;
-      text-align:center;
-      width:100%; height:100%;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      width: 100%;
+      height: 100%;
     }
-    .slide.active { display:flex; }
+
+    .slide.active {
+      display: flex;
+    }
+
     .slide img {
-      max-width:100%; max-height:80%;
-      object-fit:contain; border-radius:8px;
-      margin-bottom:1rem;
+      max-width: 100%;
+      max-height: 80%;
+      object-fit: contain;
+      border-radius: 8px;
+      margin-bottom: 1rem;
     }
-    .caption { font-size:1.1rem; }
+
+    .caption {
+      font-size: 1.1rem;
+    }
 
     /* **NEW** styling for uploader’s name */
     .uploader-name-caption {
@@ -48,34 +80,53 @@
 
     .nav-arrow,
     .close-btn {
-      position:absolute;
-      background:rgba(0,0,0,0.5);
-      border-radius:50%;
-      display:flex; align-items:center; justify-content:center;
-      user-select:none; cursor:pointer;
-      color:var(--white);
+      position: absolute;
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      cursor: pointer;
+      color: var(--white);
     }
+
     .nav-arrow {
-      top:50%; transform:translateY(-50%);
-      width:2.5rem; height:2.5rem;
-      font-size:2rem;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 2.5rem;
+      height: 2.5rem;
+      font-size: 2rem;
     }
-    .nav-arrow.prev { left:1rem; }
-    .nav-arrow.next { right:1rem; }
+
+    .nav-arrow.prev {
+      left: 1rem;
+    }
+
+    .nav-arrow.next {
+      right: 1rem;
+    }
+
     .close-btn {
-      top:1rem; right:1rem;
-      width:2.5rem; height:2.5rem;
-      font-size:2.5rem; transform:none;
-      text-decoration:none;
+      top: 1rem;
+      right: 1rem;
+      width: 2.5rem;
+      height: 2.5rem;
+      font-size: 2.5rem;
+      transform: none;
+      text-decoration: none;
     }
+
     .nav-arrow:hover,
-    .close-btn:hover { background:rgba(0,0,0,0.8); }
+    .close-btn:hover {
+      background: rgba(0, 0, 0, 0.8);
+    }
   </style>
 </head>
+
 <body>
 
-  <div class="gallery-container" id="gallery-container"
-       role="dialog" aria-modal="true" aria-label="Gallery of Uploads">
+  <div class="gallery-container" id="gallery-container" role="dialog" aria-modal="true" aria-label="Gallery of Uploads">
 
     <div class="gallery-content" id="gallery-content">
       <!-- JS will inject your real uploads here -->
@@ -83,21 +134,21 @@
 
     <div class="nav-arrow prev" id="prev-slide" aria-label="Previous slide">&#10094;</div>
     <div class="nav-arrow next" id="next-slide" aria-label="Next slide">&#10095;</div>
-  <nav class="navbar">
-    <div class="brand">gradgrid 2025</div>
-    <div class="menu">
-      <a href="index.html">home</a>
-      <a href="faq.html">help / faq</a>
-      <a href="#" class="close-btn" id="close-gallery" aria-label="Close gallery">&times;</a>
-    </div>
-  </nav>
+    <nav class="navbar">
+      <div class="brand">gradgrid 2025</div>
+      <div class="menu">
+        <a href="index.html">home</a>
+        <a href="faq.html">help / faq</a>
+        <a href="#" class="close-btn" id="close-gallery" aria-label="Close gallery">&times;</a>
+      </div>
+    </nav>
   </div>
 
   <!-- 1. Load Supabase JS -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <!-- 2. Init Supabase client -->
   <script>
-    const SUPABASE_URL      = 'https://ljvfdbrxelmqyufxifsg.supabase.co';
+    const SUPABASE_URL = 'https://ljvfdbrxelmqyufxifsg.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqdmZkYnJ4ZWxtcXl1ZnhpZnNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg1NDYwMTcsImV4cCI6MjA2NDEyMjAxN30.vXd5WBBpJgsPeTQRZRcWOzbKJ0uQULyrCPiMlfyKr6A';
     window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -141,9 +192,9 @@
 
           // if link, add its attributes
           if (u.link) {
-            slide.href   = u.link;
+            slide.href = u.link;
             slide.target = '_blank';
-            slide.rel    = 'noopener noreferrer';
+            slide.rel = 'noopener noreferrer';
           }
 
           // image
@@ -157,8 +208,8 @@
             const nameEl = document.createElement('div');
             nameEl.className = 'uploader-name-caption';
             nameEl.textContent = `By: ${u.uploader_name}`;
-            nameEl.style.fontSize    = '0.9rem';
-            nameEl.style.color       = '#ddd';
+            nameEl.style.fontSize = '0.9rem';
+            nameEl.style.color = '#ddd';
             nameEl.style.marginBottom = '0.5rem';
             slide.appendChild(nameEl);
           }
@@ -166,7 +217,7 @@
           // optional text caption
           if (u.content) {
             const cap = document.createElement('div');
-            cap.className   = 'caption';
+            cap.className = 'caption';
             cap.textContent = u.content;
             slide.appendChild(cap);
           }
@@ -203,4 +254,5 @@
 
   </script>
 </body>
+
 </html>

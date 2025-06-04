@@ -1,179 +1,201 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>Help / FAQ – GradGrid 2025</title>
-  <style>
-    /* -- Prevent any scrolling, ensure full-page fit -- */
-    html, body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-    }
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <title>Help / FAQ – GradGrid 2025</title>
+    <style>
+        /* -- Prevent any scrolling, ensure full-page fit -- */
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
 
-    :root {
-      --nav-height: 60px;
-      --navy:   #001f3f;
-      --duck:   #00bfa5;
-      --gray:   #e0e0e0;
-      --white:  #ffffff;
-      --orange: #ff9500;
-      --red:    #ff6b6b;
-      --green:  lightgreen;
-    }
+        :root {
+            --nav-height: 60px;
+            --navy: #001f3f;
+            --duck: #00bfa5;
+            --gray: #e0e0e0;
+            --white: #ffffff;
+            --orange: #ff9500;
+            --red: #ff6b6b;
+            --green: lightgreen;
+        }
 
-    * {
-      box-sizing: border-box;
-    }
+        * {
+            box-sizing: border-box;
+        }
 
-    body {
-      font-family: Arial, sans-serif;
-      background: var(--gray);
-      color: var(--navy);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
+        body {
+            font-family: Arial, sans-serif;
+            background: var(--gray);
+            color: var(--navy);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
 
-    /* Navbar */
-    .navbar {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: var(--nav-height);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: var(--navy);
-      color: var(--white);
-      padding: 0 1.5rem;
-      z-index: 10;
-    }
-    .navbar .brand {
-      color: var(--duck);
-      font-weight: bold;
-      font-size: 1.25rem;
-    }
-    .navbar .info {
-      display: flex;
-      gap: 1rem;
-      font-size: 0.95rem;
-    }
-    .navbar .info strong {
-      color: var(--duck);
-    }
-    .navbar .menu {
-      display: flex;
-      gap: 1rem;
-    }
-    .navbar a {
-      color: var(--white);
-      text-decoration: none;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    .navbar a:hover {
-      color: var(--duck);
-    }
+        /* Navbar */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: var(--nav-height);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--navy);
+            color: var(--white);
+            padding: 0 1.5rem;
+            z-index: 10;
+        }
 
-    /* Main content area */
-    main {
-      margin-top: var(--nav-height);
-      flex: 1;
-      padding: 2rem;
-      overflow-y: auto;
-    }
+        .navbar .brand {
+            color: var(--duck);
+            font-weight: bold;
+            font-size: 1.25rem;
+        }
 
-    .section-title {
-      font-size: 1.5rem;
-      margin-bottom: 0.75rem;
-      color: var(--navy);
-    }
-    .faq-text {
-      font-size: 1rem;
-      margin-bottom: 1.5rem;
-      line-height: 1.4;
-      color: #333;
-    }
+        .navbar .info {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.95rem;
+        }
 
-    .back-link {
-      display: inline-block;
-      margin-top: 2rem;
-      text-decoration: none;
-      color: var(--navy);
-      font-weight: bold;
-      border: 1px solid var(--navy);
-      padding: 0.5rem 1rem;
-      border-radius: 4px;
-    }
-    .back-link:hover {
-      background: var(--navy);
-      color: var(--white);
-    }
-  </style>
+        .navbar .info strong {
+            color: var(--duck);
+        }
+
+        .navbar .menu {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .navbar a {
+            color: var(--white);
+            text-decoration: none;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .navbar a:hover {
+            color: var(--duck);
+        }
+
+        /* Main content area */
+        main {
+            margin-top: var(--nav-height);
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 0.75rem;
+            color: var(--navy);
+        }
+
+        .faq-text {
+            font-size: 1rem;
+            margin-bottom: 1.5rem;
+            line-height: 1.4;
+            color: #333;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 2rem;
+            text-decoration: none;
+            color: var(--navy);
+            font-weight: bold;
+            border: 1px solid var(--navy);
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+        }
+
+        .back-link:hover {
+            background: var(--navy);
+            color: var(--white);
+        }
+    </style>
 </head>
+
 <body>
 
-  <!-- NAVBAR -->
-  <nav class="navbar">
-    <div class="brand">GradGrid 2025</div>
-    <div class="info">
-      <div>Sold: <strong id="sold-count">0</strong></div>
-      <div>Available: <strong id="avail-count">600</strong></div>
-      <div>Price: <strong id="price-count">$0/plot</strong></div>
-    </div>
-    <div class="menu">
-      <a id="home-btn" href="index.html">Home</a>
-      <a id="buy-plot-btn" href="#">Buy Plot</a>
-      <a id="gallery-btn" href="gallery.html">Gallery of Uploads</a>
-      <a id="clear-grid-btn" href="#">Clear Grid</a>
-      <a id="faq-btn" href="faq.html">Help / FAQ</a>
-    </div>
-  </nav>
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <div class="brand">GradGrid 2025</div>
+        <div class="info">
+            <div>Sold: <strong id="sold-count">0</strong></div>
+            <div>Available: <strong id="avail-count">600</strong></div>
+            <div>Price: <strong id="price-count">$0/plot</strong></div>
+        </div>
+        <div class="menu">
+            <a id="home-btn" href="index.html">Home</a>
+            <a id="buy-plot-btn" href="#">Buy Plot</a>
+            <a id="gallery-btn" href="gallery.html">Gallery of Uploads</a>
+            <a id="clear-grid-btn" href="#">Clear Grid</a>
+            <a id="faq-btn" href="faq.html">Help / FAQ</a>
+        </div>
+    </nav>
 
-  <main>
-    <h2 class="section-title">Help / FAQ</h2>
+    <main>
+        <h2 class="section-title">Help / FAQ</h2>
 
-    <h3 class="section-title">How to Select Plots</h3>
-    <p class="faq-text">
-      Click and drag (or tap and swipe on mobile) to highlight a rectangle of cells. Once you have the rectangle selected, hit “Confirm” at the bottom to reserve exactly that many plots.
-    </p>
+        <h3 class="section-title">How to Select Plots</h3>
+        <p class="faq-text">
+            Click and drag (or tap and swipe on mobile) to highlight a rectangle of cells. Once you have the rectangle
+            selected, hit “Confirm” at the bottom to reserve exactly that many plots.
+        </p>
 
-    <h3 class="section-title">How Long Reservations Last</h3>
-    <p class="faq-text">
-      After clicking Confirm, your selected plots turn orange and remain reserved for 20 minutes. If you don’t complete payment within that window, the system will automatically release your hold and make those plots available again.
-    </p>
+        <h3 class="section-title">How Long Reservations Last</h3>
+        <p class="faq-text">
+            After clicking Confirm, your selected plots turn orange and remain reserved for 20 minutes. If you don’t
+            complete payment within that window, the system will automatically release your hold and make those plots
+            available again.
+        </p>
 
-    <h3 class="section-title">Where to Upload Content</h3>
-    <p class="faq-text">
-      Once you confirm your grid selection, you’ll be redirected to the <a href="upload.html">Upload page</a>. There, you can choose an image or enter text. Don’t forget to scroll down and fill in the <strong>Your Name</strong> field before submitting.
-    </p>
+        <h3 class="section-title">Where to Upload Content</h3>
+        <p class="faq-text">
+            Once you confirm your grid selection, you’ll be redirected to the <a href="upload.html">Upload page</a>.
+            There, you can choose an image or enter text. Don’t forget to scroll down and fill in the <strong>Your
+                Name</strong> field before submitting.
+        </p>
 
-    <h3 class="section-title">Payment Instructions</h3>
-    <p class="faq-text">
-      After uploading content, you’ll see the <a href="payment.html">Payment page</a>. You have exactly 10 minutes to complete the Stripe checkout. If you don’t finish payment in that window, your hold expires and you’ll need to re-select plots from the grid.
-    </p>
+        <h3 class="section-title">Payment Instructions</h3>
+        <p class="faq-text">
+            After uploading content, you’ll see the <a href="payment.html">Payment page</a>. You have exactly 10 minutes
+            to complete the Stripe checkout. If you don’t finish payment in that window, your hold expires and you’ll
+            need to re-select plots from the grid.
+        </p>
 
-    <h3 class="section-title">Common Troubleshooting</h3>
-    <p class="faq-text">
-      <strong>My grid disappeared—what happened?</strong><br />
-      If you reload or navigate away before confirming, any temporary selections are lost. Make sure you click “Confirm” right after highlighting plots. If you clicked Confirm but payment timed out, your hold expired and someone else could have taken those plots—just choose again.<br /><br />
-      <strong>Why isn’t the camera opening on my phone?</strong><br />
-      If your device blocks camera access, check your browser settings and allow camera permissions. You can also upload an existing image by tapping “Choose existing image” if the live camera option fails.
-    </p>
+        <h3 class="section-title">Common Troubleshooting</h3>
+        <p class="faq-text">
+            <strong>My grid disappeared—what happened?</strong><br />
+            If you reload or navigate away before confirming, any temporary selections are lost. Make sure you click
+            “Confirm” right after highlighting plots. If you clicked Confirm but payment timed out, your hold expired
+            and someone else could have taken those plots—just choose again.<br /><br />
+            <strong>Why isn’t the camera opening on my phone?</strong><br />
+            If your device blocks camera access, check your browser settings and allow camera permissions. You can also
+            upload an existing image by tapping “Choose existing image” if the live camera option fails.
+        </p>
 
-    <h3 class="section-title">Contact / Support</h3>
-    <p class="faq-text">
-      For any other questions, 
-      email the site administrator at <a href="mailto:admin@example.com">admin@example.com</a>.
-    </p>
+        <h3 class="section-title">Contact / Support</h3>
+        <p class="faq-text">
+            For any other questions,
+            email the site administrator at <a href="mailto:admin@example.com">admin@example.com</a>.
+        </p>
 
-    <a href="index.html" class="back-link">Back to Grid</a>
-  </main>
+        <a href="index.html" class="back-link">Back to Grid</a>
+    </main>
 
 </body>
+
 </html>
