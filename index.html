@@ -153,7 +153,7 @@
       z-index: 9;
     }
 
-    /* Background Wrapper: now only sizes and centers the grid, no image */
+    /* Background Wrapper: only sizes/centers the grid, no image */
     .background-wrapper {
       position: absolute;
       top: var(--nav-height);
@@ -168,20 +168,26 @@
       z-index: 0;
     }
 
-    /* Canvas Container: centered square grid + SAME‐SIZE background image */
+    /* Canvas Container: always a perfect square that never overflows—mobile-friendly */
     .canvas-container {
-      --size: min(100%, calc(100vh - var(--nav-height)));
-      width: var(--size);
-      height: var(--size);
+      /* Make the grid fill the wrapper’s width, but never exceed the remaining height */
+      width: 100%;
+      max-width: calc(100vh - var(--nav-height));
+      /* Enforce a 1:1 aspect ratio so this div is always square */
+      aspect-ratio: 1 / 1;
+
       display: grid;
       grid-template-columns: repeat(20, 1fr);
       grid-template-rows: repeat(30, 1fr);
+
       touch-action: none;
       min-width: 2rem;
       min-height: 2rem;
+
       position: relative;
       z-index: 1;
-      /* put the background image on the exact same square as the grid */
+
+      /* Background image exactly matches this square’s dimensions */
       background: url("Background.png") center center / cover no-repeat;
     }
 
