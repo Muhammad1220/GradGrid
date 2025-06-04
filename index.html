@@ -594,9 +594,6 @@
       clearSelection(); renderGrid();
     };
     document.getElementById('clear-grid-btn').onclick = () => {
-      localStorage.removeItem('gradgrid-reserved');
-      localStorage.removeItem('gradgrid-uploads');
-      localStorage.removeItem('gradgrid-reservation');
       isSelecting = false; isMouseDown = false;
       canvas.classList.remove('select-mode');
       instructions.style.display = selBar.style.display = 'none';
