@@ -153,17 +153,10 @@
       z-index: 9;
     }
 
-    /* Grid Canvas: fits exactly beneath navbar, no overflow */
+    /* Grid Canvas: sits inside flex container, no absolute positioning */
     .canvas-container {
-      --size: min(100vw, calc(100vh - var(--nav-height)));
-      position: absolute;
-      top: var(--nav-height);
-      left: 0;
-      right: 0;
-      bottom: 0;
-      width: var(--size);
-      height: var(--size);
-      margin: auto;
+      width: min(calc(100vw - 200px), calc(100vh - var(--nav-height)));
+      height: min(calc(100vw - 200px), calc(100vh - var(--nav-height)));
       display: grid;
       grid-template-columns: repeat(20, 1fr);
       grid-template-rows: repeat(30, 1fr);
@@ -171,6 +164,13 @@
         url("Background.png") center center / cover no-repeat,
         var(--white);
       touch-action: none;
+    }
+    /* Sidebar visibility toggles */
+    #sidebar {
+      display: block;
+    }
+    #sidebar.hidden {
+      display: none;
     }
 
     .canvas-container.select-mode {
@@ -600,18 +600,24 @@
     // —— Button handlers —— 
     document.getElementById('buy-plot-btn').onclick = () => {
       document.getElementById('count-modal').style.display = 'flex';
+      // hide sidebar once selection begins
+      document.getElementById('sidebar').classList.add('hidden');
     };
     document.getElementById('home-btn').onclick = () => {
       isSelecting = false; isMouseDown = false;
       canvas.classList.remove('select-mode');
       instructions.style.display = selBar.style.display = 'none';
       clearSelection(); renderGrid();
+      // show sidebar again
+      document.getElementById('sidebar').classList.remove('hidden');
     };
     document.getElementById('clear-grid-btn').onclick = () => {
       isSelecting = false; isMouseDown = false;
       canvas.classList.remove('select-mode');
       instructions.style.display = selBar.style.display = 'none';
       clearSelection(); renderGrid();
+      // show sidebar again
+      document.getElementById('sidebar').classList.remove('hidden');
     };
     document.getElementById('start-selection-btn').onclick = () => {
       requiredCount = +document.querySelector('input[name="plot-count"]:checked').value;
