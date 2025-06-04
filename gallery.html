@@ -173,7 +173,9 @@
 
       // 2. Render gallery
       const container = document.getElementById('gallery-content');
-      const data = getUploads();
+      // Only include uploads where “paid” is true:
+      const data = getUploads().filter(u => u.paid);
+      
       if (data.length === 0) {
         const msg = document.createElement('div');
         msg.className = 'slide active';
