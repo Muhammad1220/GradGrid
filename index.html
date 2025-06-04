@@ -1,748 +1,916 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-  <title>GradGrid 2025</title>
-  <style>
-    /* -- Prevent any scrolling, ensure full-page fit -- */
-    html, body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-    }
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Upload Your Plot Content</title>
 
+  <!-- Cropper.js CSS -->
+  <link href="https://unpkg.com/cropperjs@1.5.13/dist/cropper.min.css" rel="stylesheet" />
+
+  <style>
     :root {
-      --nav-height: 60px;
-      --navy:   #001f3f;
-      --duck:   #00bfa5;
-      --gray:   #e0e0e0;
-      --white:  #ffffff;
-      --orange: #ff9500;
-      --red:    #ff6b6b;
-      --green:  lightgreen;
+      --navy: #001f3f;
+      --duck: #00bfa5;
+      --gray: #e0e0e0;
+      --white: #ffffff;
+      --light: #fafafa;
     }
 
     * {
       box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
 
     body {
       font-family: Arial, sans-serif;
       background: var(--gray);
       color: var(--navy);
-      height: 100%;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
     }
 
-    /* Navbar */
     .navbar {
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      height: var(--nav-height);
+      height: 60px;
+      background: var(--navy);
+      color: var(--white);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      background: var(--navy);
-      color: var(--white);
       padding: 0 1.5rem;
-      z-index: 10;
     }
+
     .navbar .brand {
-      color: var(--duck);
-      font-weight: bold;
       font-size: 1.25rem;
-    }
-    .navbar .info {
-      display: flex;
-      gap: 1rem;
-      font-size: 0.95rem;
-    }
-    .navbar .info strong {
+      font-weight: bold;
       color: var(--duck);
     }
-    .navbar .menu {
-      display: flex;
-      gap: 1rem;
-    }
+
     .navbar a {
       color: var(--white);
       text-decoration: none;
+      margin-left: 1rem;
       font-weight: bold;
       cursor: pointer;
     }
-    .navbar a:hover {
-      color: var(--duck);
-    }
 
-    /* “How many plots?” modal */
-    .modal {
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.5);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 20;
-    }
-    .modal-content {
+    main {
+      flex: 1;
+      max-width: 600px;
+      margin: 2rem auto;
       background: var(--white);
       padding: 2rem;
       border-radius: 8px;
-      text-align: center;
-      min-width: 260px;
-    }
-    .modal-content h2 {
-      margin-bottom: 1rem;
-    }
-    .modal-content .options {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1rem;
-      justify-content: center;
-      margin-bottom: 1rem;
-    }
-    .modal-content label {
-      cursor: pointer;
-      font-size: 1.1rem;
-    }
-    .modal-content input {
-      margin-right: 4px;
-      cursor: pointer;
-    }
-    .modal-content button {
-      padding: 0.5rem 1rem;
-      background: var(--duck);
-      color: var(--white);
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
 
-    /* Instruction banner */
-    .instructions {
-      position: fixed;
-      top: var(--nav-height);
-      left: 0; right: 0;
-      background: rgba(255,255,255,0.9);
-      text-align: center;
-      padding: 0.5rem;
+    h2 {
+      margin-bottom: 1rem;
+    }
+
+    #plot-info {
+      margin-bottom: 1.5rem;
       font-weight: bold;
-      display: none;
-      z-index: 9;
     }
 
-    /* Grid Canvas: fits exactly beneath navbar, no overflow */
-    .canvas-container {
-      --size: min(100vw, calc(100vh - var(--nav-height)));
-      position: absolute;
-      top: var(--nav-height);
-      left: 0; right: 0; bottom: 0;
-      width: var(--size);
-      height: var(--size);
-      margin: auto;
-      display: grid;
-      grid-template-columns: repeat(20, 1fr);
-      grid-template-rows:    repeat(30, 1fr);
-      background:
-        url("Background.png") center center / cover no-repeat,
-        var(--white);
-      touch-action: none;
-    }
-    .canvas-container.select-mode {
-      background: var(--white) !important;
-    }
-    .canvas-cell {
-      position: relative;
-      z-index: 1;
-      border: 1px solid var(--white);
-      background: transparent;
-      aspect-ratio: 1;
-      min-width: 2rem;
-      min-height: 2rem;
-    }
-    .canvas-cell.reserved {
-      background: var(--red) !important;
-      pointer-events: none;
-    }
-    .canvas-cell.available {
-      background: var(--green) !important;
-    }
-    .canvas-cell.selected {
-      background: var(--orange) !important;
+    .already-uploaded {
+      padding: 1rem;
+      background: #ffeedd;
+      border: 1px solid #ccaa99;
+      border-radius: 4px;
+      margin-bottom: 1rem;
+      color: #663300;
+      font-weight: bold;
+      text-align: center;
     }
 
-    /* Clickable upload containers */
-    .canvas-upload {
-      z-index: 2;
-      display: grid;
-      place-items: center;
-      overflow: hidden;
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
     }
-    .canvas-upload img {
+
+    .types {
+      display: flex;
+      gap: 1rem;
+      font-weight: bold;
+    }
+
+    .links label {
+      font-weight: bold;
+      display: flex;
+      flex-direction: column;
+      font-size: 0.9rem;
+    }
+
+    .links input[type="url"] {
+      margin-top: 0.25rem;
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    textarea {
       width: 100%;
-      height: 100%;
-      object-fit: contain;
-      display: block;
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      height: 100px;
+      resize: vertical;
+      font-size: 1rem;
     }
 
-    /* Tooltip for URLs */
-    #link-tooltip {
-      position: absolute;
-      pointer-events: none;
-      background: rgba(0,0,0,0.75);
-      color: #fff;
-      padding: 4px 6px;
-      border-radius: 3px;
-      font-size: 0.85rem;
-      white-space: nowrap;
-      z-index: 100;
-      display: none;
-    }
-
-    /* Confirm bar */
-    #selection-bar {
-      position: fixed;
-      bottom: 1rem;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 10;
-      display: none;
-    }
-    #confirm-btn {
-      padding: 0.5rem 1.5rem;
+    button {
+      padding: 0.75rem;
       background: var(--duck);
       color: var(--white);
       border: none;
       border-radius: 4px;
       font-size: 1rem;
-      cursor: not-allowed;
-      opacity: 0.6;
-    }
-    #confirm-btn.enabled {
       cursor: pointer;
-      opacity: 1;
     }
 
-    /* Gallery Modal */
-    .gallery-modal {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.9);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 30;
+    .reset-btn {
+      margin-top: 1rem;
     }
-    .gallery-modal[aria-hidden="false"] {
-      display: flex;
-    }
-    .gallery-content {
-      position: relative;
-      width: 90%; max-width: 900px;
-      height: 90%; max-height: 90%;
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .gallery-slide {
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
+
+    .crop-container {
+      width: 100%;
+      max-height: 400px;
+      margin-top: 1rem;
       text-align: center;
-      width: 100%; height: 100%;
-    }
-    .gallery-slide.active {
-      display: flex;
-    }
-    .gallery-slide img {
-      max-width: 100%;
-      max-height: 80%;
-      object-fit: contain;
-      border-radius: 8px;
-      margin-bottom: 1rem;
-    }
-    .gallery-caption {
-      color: var(--white);
-      font-size: 1rem;
     }
 
-    /* **NEW** styling for uploader’s name */
-    .gallery-uploader-name {
-      font-size: 0.9rem;
-      color: #ccc;
-      margin-bottom: 0.5rem;
+    .crop-container img {
+      max-width: 100%;
+      display: inline-block;
     }
-    .gallery-arrow,
-    .gallery-close {
-      position: absolute;
-      color: var(--white);
-      background: rgba(0,0,0,0.5);
-      border-radius: 50%;
+
+    .crop-controls {
+      margin-top: 0.5rem;
       display: flex;
-      align-items: center;
+      gap: 0.5rem;
       justify-content: center;
-      user-select: none;
+    }
+
+    .crop-controls button {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.9rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: #fff;
       cursor: pointer;
     }
-    .gallery-arrow {
-      width: 2.5rem; height: 2.5rem;
-      font-size: 2rem; top: 50%;
-      transform: translateY(-50%);
+
+    .crop-controls button img {
+      width: 20px;
+      height: 20px;
+      display: block;
+      margin: auto;
     }
-    .gallery-arrow.prev {
-      left: 1rem;
+
+    .text-controls {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+      margin-top: 0.5rem;
+      background: #000;
+      padding: 0.5rem;
+      border-radius: 4px;
     }
-    .gallery-arrow.next {
-      right: 1rem;
+
+    .text-controls select,
+    .text-controls button,
+    .text-controls input[type="color"] {
+      background: #000;
+      color: #fff;
+      border: 1px solid #555;
+      border-radius: 4px;
+      padding: 0.4rem 0.6rem;
+      font-size: 0.9rem;
+      cursor: pointer;
     }
-    .gallery-close {
-      top: 1rem; right: 1rem;
-      width: 2.5rem; height: 2.5rem;
-      font-size: 2.5rem;
-      transform: none;
+
+    .text-controls button.active {
+      background: var(--duck);
+      border-color: var(--duck);
+    }
+
+    .text.preview {
+      margin-top: 0.5rem;
+      background: #000;
+      color: #fff;
+      border: 1px solid #ddd;
+      overflow: auto;
+      font-size: 1rem;
+      padding: 0.5rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 200px;
+    }
+
+    #final-preview {
+      position: relative;
+      width: 100vw;
+      left: 50%;
+      margin-left: -50vw;
+      margin-top: 1rem;
+      text-align: center;
+    }
+
+    #final-preview img,
+    #final-preview .gif-crop-container {
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      max-width: 35vw;
+      height: auto;
+      display: inline-block;
+      margin: 0 auto;
+    }
+
+    .gif-crop-container {
+      overflow: hidden;
     }
   </style>
 </head>
-<body>
 
-  <!-- NAVBAR -->
+<body>
+  <!-- Toasts will appear here -->
+  <div id="toast-container" style="position:fixed; top:1rem; right:1rem; z-index:1000;"></div>
+  <a href="payment.html">Back to Payment</a>
+
   <nav class="navbar">
     <div class="brand">GradGrid 2025</div>
-    <div class="info">
-      <div>Sold: <strong id="sold-count">0</strong></div>
-      <div>Available: <strong id="avail-count">600</strong></div>
-      <div>Price: <strong id="price-count">$0/plot</strong></div>
-    </div>
     <div class="menu">
-      <a id="home-btn" href="index.html">Home</a>
-      <a id="buy-plot-btn" href="#">Buy Plot</a>
-      <a id="gallery-btn" href="gallery.html">Gallery of Uploads</a>
-      <a id="clear-grid-btn" href="#">Clear Grid</a>
-      <a id="faq-btn" href="faq.html">Help / FAQ</a>
+      <a href="index.html">Home</a>
+      <a href="payment.html">Back to Payment</a>
+      <a href="gallery.html">Gallery of Uploads</a>
+      <a href="faq.html">Help / FAQ</a>
     </div>
   </nav>
 
-  <!-- COUNT MODAL -->
-  <div class="modal" id="count-modal">
-    <div class="modal-content">
-      <h2>How many plots?</h2>
-      <div class="options">
-        <label><input type="radio" name="plot-count" value="1" checked>1</label>
-        <label><input type="radio" name="plot-count" value="2">2</label>
-        <label><input type="radio" name="plot-count" value="4">4</label>
-        <label><input type="radio" name="plot-count" value="9">9</label>
-        <label><input type="radio" name="plot-count" value="16">16</label>
+  <main>
+    <h2>Upload Your Plot Content</h2>
+    <div id="plot-info"></div>
+
+    <form id="upload-form">
+      <div class="types">
+        <label>
+          <input type="radio" name="type" value="image" checked /> Image
+        </label>
+        <label>
+          <input type="radio" name="type" value="text" /> Text
+        </label>
       </div>
-      <button id="start-selection-btn">Next</button>
+
+      <div class="links">
+        <label>
+          Optional link (where clicking your plot should go):
+          <input type="url" id="link-input" placeholder="https://example.com" pattern="https?://.+"
+            title="Include http:// or https://" />
+        </label>
+      </div>
+
+      <!-- **NEW: “Your Name” field** -->
+      <label>
+        Your Name:
+        <input type="text" id="uploader-name-input" placeholder="Your Name" required />
+      </label>
+
+      <div id="image-group">
+        <label>
+          Take a Photo:
+          <input type="file" id="camera-input" accept="image/*" capture="environment"
+            style="display: block; margin-top: 0.5rem;" />
+        </label>
+        <label style="margin-top: 1rem;">
+          Or choose existing image:
+          <input type="file" id="image-input" accept="image/png,image/gif,image/jpeg"
+            style="display: block; margin-top: 0.5rem;" />
+        </label>
+      </div>
+
+      <div id="text-group" style="display:none;">
+        <label>
+          Enter text (max 300 chars):
+          <textarea id="text-input" maxlength="300" placeholder="Your message…"></textarea>
+        </label>
+        <div class="text-controls" id="text-controls" style="display:none;">
+          <select id="font-select">
+            <option>Arial</option>
+            <option>Helvetica</option>
+            <option>Times New Roman</option>
+            <option>Georgia</option>
+            <option>Verdana</option>
+            <option>Tahoma</option>
+            <option>Trebuchet MS</option>
+            <option>Courier New</option>
+            <option>Lucida Console</option>
+            <option>Impact</option>
+          </select>
+          <input type="color" id="text-color-picker" value="#ffffff" title="Text Color" />
+          <input type="color" id="highlight-color-picker" value="#000000" title="Highlight Color" />
+          <button type="button" id="bold-btn"><b>B</b></button>
+          <button type="button" id="italic-btn"><i>I</i></button>
+          <button type="button" id="underline-btn"><u>U</u></button>
+          <button type="button" id="text-zoom-in">+</button>
+          <button type="button" id="text-zoom-out">–</button>
+        </div>
+        <div class="text preview" id="text-preview" style="display:none;">
+        </div>
+      </div>
+
+      <button type="submit">Submit</button>
+    </form>
+
+    <div class="preview" id="preview">
+      <div class="crop-container" id="crop-container" style="display:none;">
+        <img id="crop-target" alt="Crop target" />
+      </div>
+      <div class="crop-controls" id="crop-controls" style="display:none;">
+        <button type="button" id="zoom-in">
+          <img src="zoom-in.png" alt="⊕" />
+        </button>
+        <button type="button" id="zoom-out">
+          <img src="zoom-out.png" alt="⊖" />
+        </button>
+        <button type="button" id="rotate-left">
+          <img src="rotate-left.png" alt="↺" />
+        </button>
+        <button type="button" id="rotate-right">
+          <img src="rotate-right.png" alt="↻" />
+        </button>
+        <button type="button" id="reset">
+          <img src="reset.png" alt="⟳" />
+        </button>
+      </div>
+      <div id="final-preview" style="display:none;">
+        <h3>Final Plot Preview:</h3>
+      </div>
     </div>
-  </div>
+  </main>
 
-  <!-- INSTRUCTIONS -->
-  <div class="instructions" id="instructions"></div>
-
-  <!-- CONFIRM BAR -->
-  <div id="selection-bar">
-    <button id="confirm-btn">Confirm</button>
-  </div>
-
-  <!-- GRID CANVAS -->
-  <div class="canvas-container" id="canvas"></div>
-
-  <!-- GALLERY MODAL -->
-  <div class="gallery-modal" id="gallery-modal" aria-hidden="true" role="dialog" aria-label="Gallery of Uploads">
-    <div class="gallery-content" id="gallery-content"></div>
-    <div class="gallery-arrow prev" id="gallery-prev" aria-label="Previous slide">&#10094;</div>
-    <div class="gallery-arrow next" id="gallery-next" aria-label="Next slide">&#10095;</div>
-    <div class="gallery-close" id="gallery-close" aria-label="Close gallery">&times;</div>
-  </div>
-
-  <!-- URL Tooltip -->
-  <div id="link-tooltip"></div>
-
-  <!-- 1. Load Supabase JS (v2 UMD build) -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <!-- 2. Initialize Supabase client -->
+  <script src="https://unpkg.com/cropperjs@1.5.13/dist/cropper.min.js"></script>
+  <!-- 1. Load Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <!-- 2. Init Supabase client -->
   <script>
-    // (replace these values with your actual project URL and anon key)
-    const SUPABASE_URL      = 'https://ljvfdbrxelmqyufxifsg.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqdmZkYnJ4ZWxtcXl1ZnhpZnNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg1NDYwMTcsImV4cCI6MjA2NDEyMjAxN30.vXd5WBBpJgsPeTQRZRcWOzbKJ0uQULyrCPiMlfyKr6A';
-    try {
-      window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      console.log('Index.html: Supabase initialized.');
-    } catch (err) {
-      console.error('Index.html: Failed to initialize Supabase:', err);
-    }
+    const SUPABASE_URL = "https://ljvfdbrxelmqyufxifsg.supabase.co";
+    const SUPABASE_ANON_KEY =
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqdmZkYnJ4ZWxtcXl1ZnhpZnNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg1NDYwMTcsImV4cCI6MjA2NDEyMjAxN30.vXd5WBBpJgsPeTQRZRcWOzbKJ0uQULyrCPiMlfyKr6A";
+    window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   </script>
-
   <script>
-    // —— Config & State —— 
-    const GRID_COLS = 20, GRID_ROWS = 30, TOTAL = GRID_COLS * GRID_ROWS;
-    let isSelecting = false, isMouseDown = false, isDragging = false;
-    let requiredCount = 1, startCell = null, endCell = null, refreshInterval;
-    const canvas = document.getElementById('canvas');
-    const instructions = document.getElementById('instructions');
-    const selBar = document.getElementById('selection-bar');
-    const confirmBtn = document.getElementById('confirm-btn');
-    const tooltip = document.getElementById('link-tooltip');
+    // helper to show non-blocking in-page toasts
+    function showToast(message, type) {
+      const toast = document.createElement("div");
+      toast.style.marginBottom = "10px";
+      toast.style.padding = "12px";
+      toast.style.borderRadius = "4px";
+      toast.style.boxShadow = "0 2px 6px rgba(0,0,0,0.2)";
+      toast.style.backgroundColor = type === "error" ? "#f44336" : "#4CAF50";
+      toast.style.color = "white";
+      toast.textContent = message;
 
-    // —— Build grid cells —— 
-    const cells = [];
-    for (let i = 0; i < TOTAL; i++) {
-      const c = document.createElement('div');
-      c.className = 'canvas-cell';
-      canvas.appendChild(c);
-      cells.push(c);
+      const container = document.getElementById("toast-container");
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        container.removeChild(toast);
+      }, 3000);
     }
 
-    // —— Helpers —— 
-    const idxToRC = i => ({ row: Math.floor(i/GRID_COLS), col: i % GRID_COLS });
-    const cellIndex = el => cells.indexOf(el);
-    const getReserved = () => JSON.parse(localStorage.getItem('gradgrid-reserved') || '[]');
-    const getUploads = () => window.cloudUploads || JSON.parse(localStorage.getItem('gradgrid-uploads') || '[]');
+    document.addEventListener("DOMContentLoaded", () => {
+      const reservation = JSON.parse(
+        localStorage.getItem("gradgrid-reservation") || "{}"
+      );
+      const infoEl = document.getElementById("plot-info");
+      const uploadForm = document.getElementById("upload-form");
+      const imageGroup = document.getElementById("image-group");
+      const textGroup = document.getElementById("text-group");
+      const cropContainer = document.getElementById("crop-container");
+      const cropControls = document.getElementById("crop-controls");
+      const finalPreview = document.getElementById("final-preview");
+      const imageInput = document.getElementById("image-input");
+      const cameraInput = document.getElementById("camera-input");
+      const textInput = document.getElementById("text-input");
+      const textControls = document.getElementById("text-controls");
+      const textPreview = document.getElementById("text-preview");
+      const fontSelect = document.getElementById("font-select");
+      const colorPicker = document.getElementById("text-color-picker");
+      const highlightPicker = document.getElementById(
+        "highlight-color-picker"
+      );
+      const boldBtn = document.getElementById("bold-btn");
+      const italicBtn = document.getElementById("italic-btn");
+      const underlineBtn = document.getElementById("underline-btn");
+      const zoomInTxt = document.getElementById("text-zoom-in");
+      const zoomOutTxt = document.getElementById("text-zoom-out");
+      let cropper = null;
+      let originalType = "";
+      let tFont = "Arial",
+        tSize = 68,
+        tBold = false,
+        tItalic = false,
+        tUnder = false,
+        tColor = "#ffffff",
+        tHighlight = "#000000";
 
-    // —— Render grid & uploads —— 
-    function renderGrid() {
-      // Clear previous
-      document.querySelectorAll('.canvas-upload').forEach(e => e.remove());
-      cells.forEach(c => c.className = 'canvas-cell');
+      // Reservation check
+      if (reservation.minR == null) {
+        infoEl.innerHTML =
+          '<p style="color:red">No reservation found. Please start over.</p>';
+        uploadForm.style.display = "none";
+        document.getElementById("preview").style.display = "none";
+        return;
+      }
+      const w = reservation.maxC - reservation.minC + 1;
+      const h = reservation.maxR - reservation.minR + 1;
+      window.plotRatio = w / h;
+      const row = (n) => String.fromCharCode(65 + n);
+      const rows =
+        reservation.minR === reservation.maxR
+          ? row(reservation.minR)
+          : `${row(reservation.minR)}–${row(reservation.maxR)}`;
+      const cols =
+        reservation.minC === reservation.maxC
+          ? reservation.minC + 1
+          : `${reservation.minC + 1}–${reservation.maxC + 1}`;
+      infoEl.textContent = `Plot: Rows ${rows}, Cols ${cols}`;
 
-      if (!isSelecting) {
-        getUploads().forEach(u => {
-          let container;
-          if (u.link) {
-            container = document.createElement('a');
-            container.href   = u.link;
-            container.target = '_blank';
-            container.rel    = 'noopener noreferrer';
-          } else {
-            container = document.createElement('div');
+      // Already uploaded?
+      const uploads = JSON.parse(
+        localStorage.getItem("gradgrid-uploads") || "[]"
+      );
+      const already = uploads.some(
+        (u) =>
+          u.minR === reservation.minR &&
+          u.maxR === reservation.maxR &&
+          u.minC === reservation.minC &&
+          u.maxC === reservation.maxC
+      );
+      if (already) {
+        infoEl.insertAdjacentHTML(
+          "afterend",
+          '<div class="already-uploaded">You’ve already uploaded content for this plot.</div>'
+        );
+        const banner = document.querySelector(".already-uploaded");
+        banner.insertAdjacentHTML(
+          "afterend",
+          '<button id="reset-upload" type="button" aria-label="Change plot content" class="reset-btn">Change Content</button>'
+        );
+        uploadForm.style.display = "none";
+        document.getElementById("preview").style.display = "none";
+
+        const resetBtn = document.getElementById("reset-upload");
+        resetBtn.addEventListener("click", () => {
+          if (!confirm("Are you sure you want to replace your upload?"))
+            return;
+
+          // Remove stored entry
+          const arr = JSON.parse(
+            localStorage.getItem("gradgrid-uploads") || "[]"
+          );
+          const filtered = arr.filter(
+            (u) =>
+              !(
+                u.minR === reservation.minR &&
+                u.maxR === reservation.maxR &&
+                u.minC === reservation.minC &&
+                u.maxC === reservation.maxC
+              )
+          );
+          localStorage.setItem("gradgrid-uploads", JSON.stringify(filtered));
+
+          // Tear down cropper
+          if (cropper) {
+            cropper.destroy();
+            cropper = null;
           }
-          container.className = 'canvas-upload';
-          container.style.gridRowStart    = u.min_r + 1;
-          container.style.gridRowEnd      = u.max_r + 2;
-          container.style.gridColumnStart = u.min_c + 1;
-          container.style.gridColumnEnd   = u.max_c + 2;
+          originalType = "";
 
-          // Tooltip handlers for links
-          if (u.link) {
-            container.addEventListener('mouseenter', () => {
-              tooltip.textContent = u.link;
-              tooltip.style.display = 'block';
-            });
-            container.addEventListener('mousemove', e => {
-              tooltip.style.left = (e.pageX + 10) + 'px';
-              tooltip.style.top  = (e.pageY + 10) + 'px';
-            });
-            container.addEventListener('mouseleave', () => {
-              tooltip.style.display = 'none';
-            });
-          }
+          // Clear & hide final preview
+          finalPreview
+            .querySelectorAll("img, .gif-crop-container")
+            .forEach((el) => el.remove());
+          finalPreview.style.display = "none";
 
-          const img = document.createElement('img');
-          img.src = u.url;
-          container.appendChild(img);
-          canvas.appendChild(container);
+          // Reset text mode
+          textInput.value = "";
+          textControls.style.display = "none";
+          textPreview.style.display = "none";
+          tFont = "Arial";
+          tSize = 68;
+          tBold = false;
+          tItalic = false;
+          tUnder = false;
+          tColor = "#ffffff";
+          tHighlight = "#000000";
+          boldBtn.classList.remove("active");
+          italicBtn.classList.remove("active");
+          underlineBtn.classList.remove("active");
+
+          // Restore default mode
+          document.querySelector(
+            'input[name="type"][value="image"]'
+          ).checked = true;
+          imageGroup.style.display = "block";
+          textGroup.style.display = "none";
+          cropContainer.style.display = "none";
+          cropControls.style.display = "none";
+
+          // Clear inputs
+          document.getElementById("image-input").value = "";
+          const linkInput = document.getElementById("link-input");
+          if (linkInput) linkInput.value = "";
+
+          // Remove banner & button
+          banner.remove();
+          resetBtn.remove();
+
+          // Focus first field
+          document.getElementById("image-input").focus();
         });
+
+        return;
       }
 
-      if (isSelecting) {
-        const used = new Set();
-        getReserved().forEach(rc => used.add(rc.r * GRID_COLS + rc.c));
-        getUploads().forEach(u => {
-          for (let r = u.min_r; r <= u.max_r; r++)
-            for (let c = u.min_c; c <= u.max_c; c++)
-              used.add(r * GRID_COLS + c);
+      // Type toggle
+      document.querySelectorAll('input[name="type"]').forEach((radio) => {
+        radio.addEventListener("change", () => {
+          const isImg = radio.value === "image";
+          imageGroup.style.display = isImg ? "block" : "none";
+          textGroup.style.display = isImg ? "none" : "block";
+          cropContainer.style.display = "none";
+          cropControls.style.display = "none";
+          textControls.style.display = "none";
+          textPreview.style.display = "none";
+          finalPreview.style.display = "none";
         });
-        cells.forEach((c,i) => {
-          c.classList.add( used.has(i) ? 'reserved' : 'available' );
-        });
-      }
-
-      // Update counters
-      const allUsed = new Set();
-      getReserved().forEach(rc => allUsed.add(rc.r * GRID_COLS + rc.c));
-      getUploads().forEach(u => {
-        for (let r = u.min_r; r <= u.max_r; r++)
-          for (let c = u.min_c; c <= u.max_c; c++)
-            allUsed.add(r * GRID_COLS + c);
       });
-      document.getElementById('sold-count').textContent  = allUsed.size;
-      document.getElementById('avail-count').textContent = TOTAL - allUsed.size;
-    }
 
-    // —— Selection logic —— 
-    function clearSelection(){
-      cells.forEach(c => c.classList.remove('selected'));
-    }
-    function updateInstructions() {
-      const selCount = cells.filter(c => c.classList.contains('selected')).length;
-      const diff = requiredCount - selCount;
-      if      (diff > 0) instructions.textContent = `Select: ${diff} more plot${diff>1?'s':''}.`;
-      else if (diff < 0) instructions.textContent = `Remove ${-diff} plot${-diff>1?'s':''}.`;
-      else               instructions.textContent = `Perfect! ${requiredCount} plot${requiredCount>1?'s':''} selected.`;
-    }
-    function drawSelection(){
-      clearSelection();
-      if (!startCell || !endCell) return;
-      const i1 = cellIndex(startCell), i2 = cellIndex(endCell);
-      const {row:r1,col:c1} = idxToRC(i1), {row:r2,col:c2} = idxToRC(i2);
-      const minR = Math.min(r1,r2), maxR = Math.max(r1,r2);
-      const minC = Math.min(c1,c2), maxC = Math.max(c1,c2);
-      for (let r=minR; r<=maxR; r++)
-        for (let c=minC; c<=maxC; c++){
-          const cell = cells[r * GRID_COLS + c];
-          if (!cell.classList.contains('reserved'))
-            cell.classList.add('selected');
+      // Handle both camera + gallery inputs
+      function handleFileSelection(file) {
+        if (!file) return;
+        if (file.size > 3 * 1024 * 1024) {
+          return showToast("File exceeds 3 MB", "error");
         }
-      updateInstructions();
-    }
-    function finalizeSelection() {
-      const ok = cells.filter(c => c.classList.contains('selected')).length === requiredCount;
-      confirmBtn.disabled = !ok;
-      confirmBtn.classList.toggle('enabled', ok);
-      selBar.style.display = 'block';
-      updateInstructions();
-    }
+        originalType = file.type;
+        const reader = new FileReader();
+        reader.onload = () => {
+          finalPreview
+            .querySelectorAll(":scope > :not(h3)")
+            .forEach((el) => el.remove());
+          finalPreview.style.display = "block";
+          const img = document.getElementById("crop-target");
+          img.src = reader.result;
+          cropContainer.style.display = "block";
+          cropControls.style.display = "flex";
+          if (cropper) cropper.destroy();
+          cropper = new Cropper(img, {
+            aspectRatio:
+              originalType === "image/gif" ? NaN : window.plotRatio,
+            viewMode: 1,
+            autoCropArea: 1,
+            dragMode: "none",
+            rotatable: originalType !== "image/gif",
+            background: false,
+            ready() {
+              updateImgPreview();
+            },
+            crop() {
+              updateImgPreview();
+            },
+          });
+        };
+        reader.onerror = () => {
+          alert("Oops—couldn’t read that file. Try a different image.");
+        };
+        reader.readAsDataURL(file);
+      }
 
-    // —— Button handlers —— 
-    document.getElementById('buy-plot-btn').onclick = () => {
-      document.getElementById('count-modal').style.display = 'flex';
-    };
-    document.getElementById('home-btn').onclick = () => {
-      isSelecting = false; isMouseDown = false;
-      canvas.classList.remove('select-mode');
-      instructions.style.display = selBar.style.display = 'none';
-      clearSelection(); renderGrid();
-    };
-    document.getElementById('clear-grid-btn').onclick = () => {
-      localStorage.removeItem('gradgrid-reserved');
-      localStorage.removeItem('gradgrid-uploads');
-      localStorage.removeItem('gradgrid-reservation');
-      isSelecting = false; isMouseDown = false;
-      canvas.classList.remove('select-mode');
-      instructions.style.display = selBar.style.display = 'none';
-      clearSelection(); renderGrid();
-    };
-    document.getElementById('start-selection-btn').onclick = () => {
-      requiredCount = +document.querySelector('input[name="plot-count"]:checked').value;
-      document.getElementById('count-modal').style.display = 'none';
-      isSelecting = true;
-      canvas.classList.add('select-mode');
-      instructions.style.display = 'block';
-      selBar.style.display = 'none';
-      instructions.textContent = `Select: ${requiredCount} plot${requiredCount>1?'s':''}.`;
-      renderGrid();
-    };
+      imageInput.addEventListener("change", () => {
+        handleFileSelection(imageInput.files[0]);
+      });
+      cameraInput.addEventListener("change", () => {
+        handleFileSelection(cameraInput.files[0]);
+      });
 
-    // —— Confirm selection —— 
-    confirmBtn.onclick = () => {
-      if (confirmBtn.disabled) return;
-      const existing = getReserved();
-      const occupied = new Set(existing.map(rc => rc.r * GRID_COLS + rc.c));
-      const i1 = cellIndex(startCell), i2 = cellIndex(endCell);
-      const {row:r1,col:c1} = idxToRC(i1), {row:r2,col:c2} = idxToRC(i2);
-      const minR = Math.min(r1,r2), maxR = Math.max(r1,r2);
-      const minC = Math.min(c1,c2), maxC = Math.max(c1,c2);
-
-      const newIndices = [];
-      for (let r=minR; r<=maxR; r++)
-        for (let c=minC; c<=maxC; c++)
-          newIndices.push(r * GRID_COLS + c);
-
-      for (const idx of newIndices) {
-        if (occupied.has(idx)) {
-          alert('Sorry—some of those plots were just taken. Please re-select.');
-          startCell = endCell = null;
-          clearSelection(); finalizeSelection(); renderGrid();
+      function updateImgPreview() {
+        finalPreview
+          .querySelectorAll(":scope>:not(h3)")
+          .forEach((el) => el.remove());
+        const H = 200,
+          W = Math.round(H * window.plotRatio);
+        if (originalType === "image/gif") {
+          const box = cropper.getCropBoxData(),
+            imgD = cropper.getImageData(),
+            sx = W / box.width,
+            sy = H / box.height;
+          const container = document.createElement("div");
+          container.className = "gif-crop-container";
+          container.style.width = W + "px";
+          container.style.height = H + "px";
+          const anim = document.createElement("img");
+          anim.src = document.getElementById("crop-target").src;
+          anim.style.width = imgD.naturalWidth * sx + "px";
+          anim.style.height = imgD.naturalHeight * sy + "px";
+          anim.style.transform = `translate(${-box.left * sx}px,${-box.top * sy}px)`;
+          anim.style.transformOrigin = "top left";
+          container.appendChild(anim);
+          finalPreview.appendChild(container);
           return;
         }
+        const canvasEl = cropper.getCroppedCanvas({ width: W, height: H }),
+          img2 = document.createElement("img");
+        img2.src = canvasEl.toDataURL();
+        finalPreview.appendChild(img2);
       }
 
-      const reserved = existing.slice();
-      newIndices.forEach(idx => {
-        const {row, col} = idxToRC(idx);
-        reserved.push({ r: row, c: col });
-      });
-      localStorage.setItem('gradgrid-reserved', JSON.stringify(reserved));
-      localStorage.setItem('gradgrid-reservation', JSON.stringify({
-        minR, maxR, minC, maxC,
-        width:  maxC - minC + 1,
-        height: maxR - minR + 1,
-        area:   requiredCount,
-        price:  0
-      }));
-
-      instructions.style.display = 'none';
-      window.location.href = 'upload.html';
-    };
-
-    // —— Drag-to-select (mouse + touch) —— 
-    cells.forEach(cell => {
-      // Mouse down handler
-      cell.addEventListener('mousedown', () => {
-        if (!isSelecting || cell.classList.contains('reserved')) return;
-        isMouseDown = true;
-        startCell = cell;
-        endCell = null;
-        clearSelection();
-        selBar.style.display = 'none';
-      });
-      // Touch start handler (for taps/initial touch)
-      cell.addEventListener('touchstart', (evt) => {
-        evt.preventDefault();
-        if (!isSelecting || cell.classList.contains('reserved')) return;
-        isMouseDown = true;
-        startCell = cell;
-        endCell = null;
-        clearSelection();
-        selBar.style.display = 'none';
-      });
-      // Mouseover (drag select)
-      cell.addEventListener('mouseover', () => {
-        if (isSelecting && isMouseDown && !cell.classList.contains('reserved')) {
-          endCell = cell;
-          drawSelection();
+      ["zoom-in", "zoom-out", "rotate-left", "rotate-right", "reset"].forEach(
+        (id) => {
+          document.getElementById(id).onclick = () => {
+            if (!cropper) return;
+            const ops = {
+              "zoom-in": () => cropper.zoom(0.1),
+              "zoom-out": () => cropper.zoom(-0.1),
+              "rotate-left": () => cropper.rotate(-45),
+              "rotate-right": () => cropper.rotate(45),
+              reset: () => cropper.reset(),
+            };
+            ops[id]();
+          };
         }
+      );
+
+      // Text preview
+      function updateTextLive() {
+        textControls.style.display = "flex";
+        textPreview.style.display = "block";
+        finalPreview.style.display = "block";
+        const w = textPreview.clientWidth;
+        textPreview.textContent = textInput.value;
+        textPreview.style.fontFamily = tFont;
+        textPreview.style.fontSize = tSize + "px";
+        textPreview.style.fontWeight = tBold ? "700" : "400";
+        textPreview.style.fontStyle = tItalic ? "italic" : "normal";
+        textPreview.style.textDecoration = tUnder ? "underline" : "none";
+        textPreview.style.color = tColor;
+        textPreview.style.background = tHighlight;
+        const H = 200,
+          W = Math.round(H * window.plotRatio),
+          cnv = document.createElement("canvas");
+        cnv.width = W;
+        cnv.height = H;
+        const ctx = cnv.getContext("2d");
+        ctx.fillStyle = tHighlight;
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = tColor;
+        ctx.font = `${tItalic ? "italic " : ""}${tBold ? "bold " : ""}${tSize}px ${tFont}`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        const lines = textInput.value.split("\n"),
+          lh = tSize * 1.2,
+          startY = (H - lines.length * lh) / 2 + lh / 2;
+        lines.forEach((l, i) => {
+          const y = startY + i * lh;
+          ctx.fillText(l, W / 2, y);
+          if (tUnder) {
+            const m = ctx.measureText(l).width,
+              uy = y + tSize / 2;
+            ctx.beginPath();
+            ctx.moveTo(W / 2 - m / 2, uy);
+            ctx.lineTo(W / 2 + m / 2, uy);
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = tColor;
+            ctx.stroke();
+          }
+        });
+        finalPreview
+          .querySelectorAll(":scope>img:not(.gif-crop-container img)")
+          .forEach((e) => e.remove());
+        const imgEl = document.createElement("img");
+        imgEl.src = cnv.toDataURL();
+        finalPreview.appendChild(imgEl);
+      }
+
+      textInput.addEventListener("input", updateTextLive);
+      fontSelect.onchange = () => {
+        tFont = fontSelect.value;
+        updateTextLive();
+      };
+      colorPicker.oninput = () => {
+        tColor = colorPicker.value;
+        updateTextLive();
+      };
+      highlightPicker.oninput = () => {
+        tHighlight = highlightPicker.value;
+        updateTextLive();
+      };
+      boldBtn.onclick = () => {
+        tBold = !tBold;
+        boldBtn.classList.toggle("active", tBold);
+        updateTextLive();
+      };
+      italicBtn.onclick = () => {
+        tItalic = !tItalic;
+        italicBtn.classList.toggle("active", tItalic);
+        updateTextLive();
+      };
+      underlineBtn.onclick = () => {
+        tUnder = !tUnder;
+        underlineBtn.classList.toggle("active", tUnder);
+        updateTextLive();
+      };
+      zoomInTxt.onclick = () => {
+        tSize = Math.round(tSize * 1.1);
+        updateTextLive();
+      };
+      zoomOutTxt.onclick = () => {
+        tSize = Math.round(tSize * 0.9);
+        updateTextLive();
+      };
+
+      // Submit → upload to Supabase Storage + insert into uploads table
+      uploadForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const type = document.querySelector(
+          'input[name="type"]:checked'
+        ).value;
+        const link = document
+          .getElementById("link-input")
+          .value.trim();
+        if (link && !/^https?:\/\//.test(link)) {
+          return alert("Please include http:// or https://");
+        }
+
+        // **NEW: Fetch “Name” field**
+        const uploaderName = document
+          .getElementById("uploader-name-input")
+          .value.trim();
+        if (!uploaderName) {
+          return alert("Please enter your name.");
+        }
+
+        // 1. Prepare Blob + extension + optional text content
+        let blob, extension, textContent = null;
+        if (type === "image") {
+          if (originalType === "image/gif") {
+            // GIF: grab the cropped <img> src and fetch as blob
+            const gifImg = finalPreview.querySelector(
+              ".gif-crop-container img"
+            );
+            if (!gifImg) return alert("Something went wrong with your GIF.");
+            blob = await fetch(gifImg.src).then((res) => res.blob());
+            extension = "gif";
+          } else {
+            if (!cropper) return alert("Please select & adjust an image.");
+            blob = await new Promise((resolve) =>
+              cropper.getCroppedCanvas().toBlob(resolve)
+            );
+            extension = originalType.split("/")[1]; // e.g. "png" or "jpeg"
+          }
+        } else {
+          // Text: draw your preview canvas to a blob
+          const txt = textInput.value.trim();
+          if (!txt) return alert("Please enter and preview your text.");
+          textContent = txt;
+          const canvas = document.createElement("canvas");
+          const H = 200,
+            W = Math.round(H * window.plotRatio);
+          canvas.width = W;
+          canvas.height = H;
+          const ctx = canvas.getContext("2d");
+          // draw highlight & text (reuse your updateTextLive logic)
+          ctx.fillStyle = tHighlight;
+          ctx.fillRect(0, 0, W, H);
+          ctx.fillStyle = tColor;
+          ctx.font = `${tItalic ? "italic " : ""}${tBold ? "bold " : ""}${tSize}px ${tFont}`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          const lines = txt.split("\n"),
+            lh = tSize * 1.2,
+            startY = (H - lines.length * lh) / 2 + lh / 2;
+          lines.forEach((l, i) => {
+            const y = startY + i * lh;
+            ctx.fillText(l, W / 2, y);
+            if (tUnder) {
+              const m = ctx.measureText(l).width,
+                uy = y + tSize / 2;
+              ctx.beginPath();
+              ctx.moveTo(W / 2 - m / 2, uy);
+              ctx.lineTo(W / 2 + m / 2, uy);
+              ctx.lineWidth = 2;
+              ctx.strokeStyle = tColor;
+              ctx.stroke();
+            }
+          });
+          blob = await new Promise((resolve) =>
+            canvas.toBlob(resolve)
+          );
+          extension = "png";
+        }
+
+        // 2. Upload blob to Supabase Storage
+        const fileName = `upload-${Date.now()}.${extension}`;
+        const { data: storageData, error: upErr } = await supabase
+          .storage
+          .from("uploads")
+          .upload(
+            `public/${fileName}`,
+            blob,
+            {
+              cacheControl: "3600",
+              upsert: false,
+              contentType: blob.type,
+            }
+          );
+        if (upErr) {
+          alert("Storage upload error: " + upErr.message);
+          return;
+        }
+
+        // 3. Get the public URL
+        const filePath = storageData.path;
+        const {
+          data: { publicUrl },
+          error: urlErr,
+        } = supabase
+          .storage
+          .from("uploads")
+          .getPublicUrl(filePath);
+        if (urlErr) {
+          alert("URL fetch error: " + urlErr.message);
+          return;
+        }
+
+        // 4. Insert a row into your uploads table (paid: false), then capture the new row’s ID
+        const { data: insertedData, error: dbErr } = await supabase
+          .from("uploads")
+          .insert([
+            {
+              url: publicUrl,
+              type: type,
+              content: textContent,
+              min_r: reservation.minR,
+              max_r: reservation.maxR,
+              min_c: reservation.minC,
+              max_c: reservation.maxC,
+              link: link || null,
+              uploader_name: uploaderName,
+              paid: false,
+            },
+          ])
+          .select("id")
+          .single();
+        if (dbErr) return alert("Database insert error: " + dbErr.message);
+        const uploadId = insertedData.id;
+
+        // 5. Success!
+        alert("Upload successful! Redirecting to payment…");
+        window.location.href = `payment.html?uploadId=${uploadId}`;
       });
     });
-    // Track finger movement over the grid container
-    canvas.addEventListener('touchmove', (evt) => {
-      if (!isSelecting || !isMouseDown) return;
-      evt.preventDefault();
-      const touch = evt.touches[0];
-      const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
-      if (!targetElement) return;
-      if (targetElement.classList.contains('canvas-cell') && !targetElement.classList.contains('reserved')) {
-        endCell = targetElement;
-        drawSelection();
-      }
-    });
-    function onRelease() {
-      if (isSelecting && isMouseDown) {
-        isMouseDown = false;
-        finalizeSelection();
-      }
-      if (isDragging) {
-        isDragging = false;
-        // One final update when drag ends:
-        renderGrid();
-        if (refreshInterval) clearInterval(refreshInterval);
-        // Only refresh when not dragging:
-        refreshInterval = setInterval(() => {
-          if (!isDragging) renderGrid();
-        }, 5000);
-      }
-    }
-    document.addEventListener('mouseup', onRelease);
-    document.addEventListener('touchend', onRelease);
-    canvas.addEventListener('mousedown', () => {
-      isDragging = true;
-      if (refreshInterval) clearInterval(refreshInterval);
-    });
-    canvas.addEventListener('touchstart', () => {
-      isDragging = true;
-      if (refreshInterval) clearInterval(refreshInterval);
+  </script>
+
+  <!-- RELEASE-ON-LEAVE LOGIC -->
+  <script>
+    // track if the form was successfully submitted
+    let uploadConfirmed = false;
+    const form = document.getElementById("upload-form");
+    form.addEventListener("submit", () => {
+      uploadConfirmed = true;
     });
 
-    // —— Init: fetch uploads & auto-refresh —— 
-    window.addEventListener('DOMContentLoaded', async () => {
-      // 1. Fetch all uploads from Supabase
-      const { data: uploads, error } = await supabase
-        .from('uploads')
-        .select('*')
-        .eq('paid', true)
-        .order('created_at', { ascending: false });
-      if (error) {
-        console.error('Error loading uploads:', error);
-      } else {
-        // Overwrite localStorage-backed uploads with cloud data
-        window.cloudUploads = uploads;
-      }
-
-      // 2. First render & periodic refresh
-      renderGrid();
-      refreshInterval = setInterval(() => {
-        if (!isDragging) renderGrid();
-      }, 5000);
-    });
-
-
-    // —— Gallery logic —— 
-    const galleryBtn     = document.getElementById('gallery-btn');
-    const galleryModal   = document.getElementById('gallery-modal');
-    const galleryContent = document.getElementById('gallery-content');
-    const galleryPrev    = document.getElementById('gallery-prev');
-    const galleryNext    = document.getElementById('gallery-next');
-    const galleryClose   = document.getElementById('gallery-close');
-    let currentSlide     = 0;
-
-    function showGalleryModal() {
-      galleryContent.innerHTML = '';
-      const uploads = getUploads();
-      if (uploads.length === 0) {
-        const msg = document.createElement('div');
-        msg.className = 'gallery-slide active';
-        msg.innerHTML = '<div class="gallery-caption">No uploads to display.</div>';
-        galleryContent.appendChild(msg);
-      } else {
-        uploads.forEach((u, i) => {
-          const slide = document.createElement('div');
-          slide.className = 'gallery-slide' + (i === 0 ? ' active' : '');
-          slide.dataset.index = i;
-          const img = document.createElement('img');
-          img.src = u.url;
-          img.alt = `Upload ${i + 1}`;
-          slide.appendChild(img);
-
-          // **NEW**: Show uploader’s name
-          if (u.uploader_name) {
-            const nameEl = document.createElement('div');
-            nameEl.className = 'gallery-uploader-name';
-            nameEl.textContent = `By: ${u.uploader_name}`;
-            nameEl.style.fontSize    = '0.9rem';
-            nameEl.style.color       = '#ccc';
-            nameEl.style.marginBottom = '0.5rem';
-            slide.appendChild(nameEl);
-          }
-
-          const cap = document.createElement('div');
-          cap.className = 'gallery-caption';
-          cap.textContent = `Upload ${i + 1}`;
-          slide.appendChild(cap);
-          galleryContent.appendChild(slide);
-        });
-      }
-      currentSlide = 0;
-      galleryModal.setAttribute('aria-hidden', 'false');
-    }
-
-    function navigateGallery(n) {
-      const slides = Array.from(galleryContent.querySelectorAll('.gallery-slide'));
-      if (!slides.length) return;
-      slides[currentSlide].classList.remove('active');
-      currentSlide = (n + slides.length) % slides.length;
-      slides[currentSlide].classList.add('active');
-    }
-
-    galleryBtn.addEventListener('click', showGalleryModal);
-    galleryClose.addEventListener('click', () => galleryModal.setAttribute('aria-hidden', 'true'));
-    galleryPrev.addEventListener('click', () => navigateGallery(currentSlide - 1));
-    galleryNext.addEventListener('click', () => navigateGallery(currentSlide + 1));
-    galleryModal.addEventListener('click', e => {
-      if (e.target === galleryModal) galleryModal.setAttribute('aria-hidden', 'true');
-    });
-    document.addEventListener('keydown', e => {
-      if (galleryModal.getAttribute('aria-hidden') === 'false') {
-        if (e.key === 'Escape') galleryModal.setAttribute('aria-hidden', 'true');
-        if (e.key === 'ArrowLeft') navigateGallery(currentSlide - 1);
-        if (e.key === 'ArrowRight') navigateGallery(currentSlide + 1);
+    // before unloading, if not confirmed, release the reserved plots
+    window.addEventListener("beforeunload", () => {
+      if (!uploadConfirmed) {
+        const reservation = JSON.parse(
+          localStorage.getItem("gradgrid-reservation") || "{}"
+        );
+        if (reservation.minR != null) {
+          const stillReserved = JSON.parse(
+            localStorage.getItem("gradgrid-reserved") || "[]"
+          ).filter(
+            (cell) =>
+              cell.r < reservation.minR ||
+              cell.r > reservation.maxR ||
+              cell.c < reservation.minC ||
+              cell.c > reservation.maxC
+          );
+          localStorage.setItem(
+            "gradgrid-reserved",
+            JSON.stringify(stillReserved)
+          );
+          localStorage.removeItem("gradgrid-reservation");
+          localStorage.removeItem("gradgrid-requiredCount");
+        }
       }
     });
   </script>
 </body>
+
 </html>
