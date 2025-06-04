@@ -175,6 +175,12 @@
     /* Grid Canvas: fits in remaining space beside sidebar */
     .canvas-container {
       --size: min(calc(100vw - 200px), calc(100vh - var(--nav-height)));
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      margin: auto;
       width: var(--size);
       height: var(--size);
       display: grid;
