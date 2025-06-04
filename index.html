@@ -153,17 +153,36 @@
       z-index: 9;
     }
 
-    /* Grid Canvas: fits under navbar */
+    /* ---------- New: Two-column layout ---------- */
+    .main-content {
+      display: flex;
+      margin-top: var(--nav-height);
+      height: calc(100vh - var(--nav-height));
+    }
+
+    .explanation {
+      width: 25%;
+      padding: 1rem;
+      background: var(--white);
+      color: var(--navy);
+      box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+      overflow-y: auto;
+    }
+
+    .explanation h2 {
+      margin-bottom: 0.5rem;
+      font-size: 1.25rem;
+    }
+
+    .explanation p {
+      font-size: 1rem;
+      line-height: 1.4;
+    }
+
+    /* Grid Canvas: now occupies right 75% */
     .canvas-container {
-      --size: min(100vw, calc(100vh - var(--nav-height)));
-      position: absolute;
-      top: var(--nav-height);
-      left: 0;
-      right: 0;
-      bottom: 0;
-      width: var(--size);
-      height: var(--size);
-      margin: auto;
+      width: 75%;
+      height: 100%;
       display: grid;
       grid-template-columns: repeat(20, 1fr);
       grid-template-rows: repeat(30, 1fr);
@@ -406,8 +425,16 @@
     <button id="confirm-btn">Confirm</button>
   </div>
 
-  <!-- GRID CANVAS -->
-  <div class="canvas-container" id="canvas"></div>
+  <!-- MAIN CONTENT: Explanation + Grid -->
+  <div class="main-content">
+    <div class="explanation">
+      <h2>How to Buy a Plot and Post</h2>
+      <p>
+        Click “Buy Plot” to select your square(s) on the grid. Once you confirm, you’ll be prompted to upload an image or enter text for those plots, and then complete payment within 20 minutes. After payment is processed, your content will appear in the gallery.
+      </p>
+    </div>
+    <div class="canvas-container" id="canvas"></div>
+  </div>
 
   <!-- GALLERY OVERLAY -->
   <div class="gallery-container" id="gallery-container" aria-hidden="true" role="dialog"
