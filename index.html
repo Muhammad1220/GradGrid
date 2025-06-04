@@ -153,28 +153,24 @@
       z-index: 9;
     }
 
-    /* Background Wrapper: only sizes/centers the grid, no image */
-    .background-wrapper {
+    /* FULL‐SCREEN FLEX WRAPPER: covers viewport under the navbar and centers the grid */
+    .canvas-wrapper {
       position: absolute;
       top: var(--nav-height);
+      bottom: 0;
       left: 0;
       right: 0;
-      bottom: 0;
-      overflow: hidden;
       display: flex;
       justify-content: center;
       align-items: center;
-      background-color: var(--white);
-      z-index: 0;
+      /* no background here—grid itself will handle the image */
     }
 
-    /* Canvas Container: always a perfect square that never overflows—mobile-friendly */
+    /* RESPONSIVE SQUARE GRID + BACKGROUND IMAGE */
     .canvas-container {
-      /* Make the grid fill the wrapper’s width, but never exceed the remaining height */
-      width: 100%;
-      max-width: calc(100vh - var(--nav-height));
-      /* Enforce a 1:1 aspect ratio so this div is always square */
-      aspect-ratio: 1 / 1;
+      aspect-ratio: 1 / 1;               /* Always a perfect square */
+      width: 100%;                       /* Fill the wrapper’s width */
+      max-height: 100%;                  /* Never exceed wrapper’s height (viewport minus navbar) */
 
       display: grid;
       grid-template-columns: repeat(20, 1fr);
@@ -187,8 +183,8 @@
       position: relative;
       z-index: 1;
 
-      /* Background image exactly matches this square’s dimensions */
-      background: url("Background.png") center center / cover no-repeat;
+      /* Background image “contains” itself inside the square, no cropping */
+      background: url("Background.png") center center / contain no-repeat, var(--white);
     }
 
     .canvas-container.select-mode {
@@ -423,8 +419,8 @@
     <button id="confirm-btn">Confirm</button>
   </div>
 
-  <!-- GRID CANVAS (wrapped for centered background) -->
-  <div class="background-wrapper">
+  <!-- GRID CANVAS (responsive square wrapper) -->
+  <div class="canvas-wrapper">
     <div class="canvas-container" id="canvas"></div>
   </div>
 
