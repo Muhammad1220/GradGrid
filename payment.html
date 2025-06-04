@@ -72,28 +72,6 @@
       font-size: 1rem;
     }
 
-    form {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-      margin-top: 1.5rem;
-    }
-
-    label {
-      display: flex;
-      flex-direction: column;
-      font-weight: bold;
-      font-size: 0.95rem;
-    }
-
-    input {
-      padding: 0.5rem;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 1rem;
-      margin-top: 0.25rem;
-    }
-
     button {
       padding: 0.75rem;
       background: var(--duck);
@@ -129,33 +107,41 @@
         <strong>Total:</strong>
         $<span id="total-display">0.00</span>
       </p>
-      <!-- (Removed original 20:00 timer; replaced by the Stripe Checkout + 10-minute timer below) -->
+      <!-- (Removed original 20:00 timer; replaced by the Stripe Checkout + 20-minute timer below) -->
     </div>
 
-    <!-- NEW BLOCK: Stripe Checkout button + 10-minute timer (replaces old <form>) -->
+    <!-- NEW BLOCK: Stripe Checkout + 20-minute hold and dynamic pricing -->
     <p>
       <strong>Time Remaining:</strong>
-      <span id="timer-display">10:00</span>
+      <span id="timer-display">20:00</span>
     </p>
     <button id="checkout-btn">Pay Now</button>
 
-    <!-- Load Supabase first so `supabase` is defined -->
+    <!-- 1) Load Supabase JS (so `supabase.createClient(...)` can be called) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
-    <!-- Then load Stripe.js, then run the Stripe + timer logic -->
+    <!-- 2) Load Stripe.js (so `Stripe(...)` is defined) -->
     <script src="https://js.stripe.com/v3"></script>
+
     <script>
       (async () => {
-        // 1) Initialize Supabase client for reads
+        console.log('--- payment.html script starting ---');
+
+        // Initialize Supabase client for read operations
+        const SUPABASE_URL = 'https://ljvfdbrxelmqyufxifsg.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJ…'; // ← replace with your real anon key
         const supabaseClient = supabase.createClient(
-          'https://ljvfdbrxelmqyufxifsg.supabase.co',
-          null
+          SUPABASE_URL,
+          SUPABASE_ANON_KEY
+        );
+        console.log('Supabase client initialized.');
+
+        // Initialize Stripe with your publishable key
+        const stripe = Stripe(
+          'pk_test_51RMzWm2euuVHjVwe4sOT0znfaDHUwRBzcvF0xBNpvT68PlollRNLOW6cTMN5EGiC8O89Ko4q0kA2l9JSDQdIV53900N3AxXjNH'
         );
 
-        // 2) Initialize Stripe with your publishable key
-        const stripe = Stripe("pk_test_51RMzWm2euuVHjVwe4sOT0znfaDHUwRBzcvF0xBNpvT68PlollRNLOW6cTMN5EGiC8O89Ko4q0kA2l9JSDQdIV53900N3AxXjNH");
-
-        // 3) Extract uploadId from URL
+        // Extract uploadId from URL query string
         const urlParams = new URLSearchParams(window.location.search);
         const uploadId = urlParams.get('uploadId');
         if (!uploadId) {
@@ -164,108 +150,140 @@
           return;
         }
 
-        // 4) Fetch reservation’s reserved_at timestamp
-        const { data: resRow } = await supabaseClient
+        // Fetch the reservation’s reserved_at timestamp to enforce a 20-min hold
+        const { data: resRow, error: resErr } = await supabaseClient
           .from('reservations')
           .select('reserved_at')
           .eq('upload_id', uploadId)
           .single();
-
-        if (!resRow) {
-          alert('No reservation found. Please re-select your plot.');
+        if (resErr || !resRow) {
+          alert('Reservation not found. Please re-select your plot.');
           window.location.href = 'index.html';
           return;
         }
-
-        // 5) Compute the 10-minute payment cutoff
         const reservedAt = new Date(resRow.reserved_at);
-        const paymentExpires = new Date(reservedAt.getTime() + 10 * 60 * 1000);
+        const expiresAt = new Date(reservedAt.getTime() + 20 * 60 * 1000);
 
-        // 6) Start countdown timer (updates ONLY #timer-display)
+        // Start countdown timer (updates ONLY #timer-display)
         const timerDisplay = document.getElementById('timer-display');
-        const timerInterval = setInterval(() => {
+        function updateTimer() {
           const now = new Date();
-          const diff = paymentExpires - now;
-
-          if (diff <= 0) {
-            clearInterval(timerInterval);
-            // Expire the hold in Supabase:
+          const diffMs = expiresAt - now;
+          if (diffMs <= 0) {
+            // If hold expired, delete the reservation and redirect to grid
             supabaseClient
               .from('reservations')
               .delete()
               .eq('upload_id', uploadId);
-            alert('Your 10-minute window has expired. Please re-select your plot.');
-            window.location.href = 'index.html';
+            alert('Your hold has expired. Please re-select your plot.');
+            window.location.href = 'index.html?expired=true';
             return;
           }
-
-          // Update “mm:ss”
-          const minutes = Math.floor(diff / 60000);
-          const seconds = Math.floor((diff % 60000) / 1000);
-          timerDisplay.textContent =
-            `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-        }, 1000);
-
-        // 7) “Pay Now” click handler
-        document.getElementById('checkout-btn').addEventListener('click', async () => {
-          document.getElementById('checkout-btn').disabled = true;
-
-          // 7a) Recalculate dynamic price
-          const { data: soldRows } = await supabaseClient
-            .from('uploads')
-            .select('min_r, max_r, min_c, max_c')
-            .eq('paid', true);
-
-          let soldCells = 0;
-          soldRows.forEach(r => {
-            soldCells += (r.max_r - r.min_r + 1) * (r.max_c - r.min_c + 1);
-          });
-          const blocksSold = Math.floor(soldCells / 10);
-          const surcharge = blocksSold * 0.5;
-          const basePrice = 2.00; // $2.00/plot
-          const currentPrice = basePrice + surcharge;
-          const amountInCents = Math.round(currentPrice * 100);
-
-          // 7b) Get plot dimensions for quantity
-          const { data: uploadRow } = await supabaseClient
-            .from('uploads')
-            .select('min_r, max_r, min_c, max_c')
-            .eq('id', uploadId)
-            .single();
-
-          const width = uploadRow.max_c - uploadRow.min_c + 1;
-          const height = uploadRow.max_r - uploadRow.min_r + 1;
-          const quantity = width * height;
-
-          // 7c) Call Netlify Function to create a Checkout Session
-          const response = await fetch('/.netlify/functions/create-checkout-session', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              uploadId,
-              unitAmount: amountInCents,
-              quantity
-            }),
-          });
-
-          const { sessionId } = await response.json();
-          // 7d) Redirect to Stripe Checkout
-          await stripe.redirectToCheckout({ sessionId });
-        });
-
-        // 8) If user returns with ?canceled=true, expire hold immediately
-        if (urlParams.get('canceled') === 'true') {
-          await supabaseClient
-            .from('reservations')
-            .delete()
-            .eq('upload_id', uploadId);
-          window.location.href = 'index.html?paymentCanceled=true';
+          const totalSeconds = Math.floor(diffMs / 1000);
+          const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+          const seconds = String(totalSeconds % 60).padStart(2, '0');
+          timerDisplay.textContent = `${minutes}:${seconds}`;
         }
+        updateTimer();
+        setInterval(updateTimer, 1000);
+
+        // Compute how many plots were reserved AND dynamic pricing
+        // 1) Fetch the upload row (to know min_r, max_r, min_c, max_c)
+        const { data: uploadRow, error: uploadErr } = await supabaseClient
+          .from('uploads')
+          .select('min_r, max_r, min_c, max_c')
+          .eq('id', uploadId)
+          .single();
+        if (uploadErr || !uploadRow) {
+          alert('Unable to find reservation. Please start over.');
+          window.location.href = 'index.html';
+          return;
+        }
+        // 2) Number of plots = (max_r - min_r + 1) × (max_c - min_c + 1)
+        const count =
+          (uploadRow.max_r - uploadRow.min_r + 1) *
+          (uploadRow.max_c - uploadRow.min_c + 1);
+        document.getElementById('count-display').textContent = count;
+
+        // 3) Fetch all previously paid uploads, sum up “sold cells” for surcharge
+        const { data: paidUploads } = await supabaseClient
+          .from('uploads')
+          .select('min_r, max_r, min_c, max_c')
+          .eq('paid', true);
+        let soldCells = 0;
+        (paidUploads || []).forEach((u) => {
+          soldCells += (u.max_r - u.min_r + 1) * (u.max_c - u.min_c + 1);
+        });
+        const blocksSold = Math.floor(soldCells / 10);
+        const surcharge = blocksSold * 0.5; // $0.50 per block of 10
+        const basePrice = 2.0; // $2.00 per plot
+        const pricePerPlot = basePrice + surcharge;
+        const totalAmount = count * pricePerPlot;
+        document.getElementById('total-display').textContent =
+          totalAmount.toFixed(2);
+        console.log('Selected plots count =', count);
+        console.log('Total charge =', totalAmount.toFixed(2));
+
+        // “Pay Now” click handler: call Netlify function & redirect to Stripe
+        document
+          .getElementById('checkout-btn')
+          .addEventListener('click', async () => {
+            document.getElementById('checkout-btn').disabled = true;
+
+            // Convert dollars → cents
+            const unitAmountInCents = Math.round(pricePerPlot * 100);
+
+            // How many items (quantity)
+            const quantity = count;
+
+            // Call your Netlify function at /.netlify/functions/create-checkout-session
+            console.log(
+              'Calling create-checkout-session with:',
+              uploadId,
+              unitAmountInCents,
+              quantity
+            );
+            const response = await fetch(
+              '/.netlify/functions/create-checkout-session',
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  uploadId,
+                  unitAmount: unitAmountInCents,
+                  quantity,
+                }),
+              }
+            );
+            if (!response.ok) {
+              console.error(
+                'create-checkout-session failed:',
+                response.status
+              );
+              alert('Unable to start payment. Please try again.');
+              return;
+            }
+            const { sessionId, error: fnError } = await response.json();
+            if (fnError) {
+              console.error('Function returned error:', fnError);
+              alert('Payment function error. Please contact support.');
+              return;
+            }
+            console.log('Received Stripe sessionId → redirecting…');
+            // Redirect to Stripe Checkout
+            const { error: stripeErr } = await stripe.redirectToCheckout({
+              sessionId,
+            });
+            if (stripeErr) {
+              console.error('stripe.redirectToCheckout() error:', stripeErr);
+              alert(stripeErr.message);
+            }
+          });
       })();
     </script>
   </main>
 
-  <!-- (Removed obsolete Supabase import; it is now loaded above in the Stripe/timer block) -->
+  <!-- (No further Supabase/Stripe imports below.) -->
 </body>
 
 </html>
