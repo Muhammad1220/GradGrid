@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <title>GradGrid 2025</title>
   <style>
     /* -- Prevent any scrolling, ensure full-page fit -- */
@@ -166,13 +166,14 @@
       /* no background here—grid itself will handle the image */
     }
 
-    /* RESPONSIVE SQUARE GRID + BACKGROUND IMAGE (always fully visible on any viewport) */
+    /* RESPONSIVE 20×30 GRID + BACKGROUND IMAGE */
     .canvas-container {
-      aspect-ratio: 1 / 1;                                  /* Always a perfect square */
-      width: 100vw;                                         /* Fill full viewport width */
-      height: calc(100vh - var(--nav-height));              /* Fill all height under the navbar */
-      max-width: calc(100vh - var(--nav-height));           /* Cap width so the square never exceeds available height */
-      max-height: calc(100vh - var(--nav-height));          /* Cap height so it never exceeds available height */
+      /* 1) Keep the grid’s 20 columns × 30 rows aspect ratio (2:3) */
+      aspect-ratio: 20 / 30;
+
+      /* 2) Fill the wrapper’s width, but never exceed the available height (viewport minus navbar) */
+      width: 100%;
+      max-height: calc(100vh - var(--nav-height));
 
       display: grid;
       grid-template-columns: repeat(20, 1fr);
@@ -185,7 +186,7 @@
       position: relative;
       z-index: 1;
 
-      /* Background image “contains” itself inside the square, never cropped */
+      /* 3) Background image is “contained” inside that 2:3 box, no cropping */
       background: url("Background.png") center center / contain no-repeat, var(--white);
     }
 
@@ -421,7 +422,7 @@
     <button id="confirm-btn">Confirm</button>
   </div>
 
-  <!-- GRID CANVAS (responsive square wrapper) -->
+  <!-- GRID CANVAS (responsive 20×30 wrapper) -->
   <div class="canvas-wrapper">
     <div class="canvas-container" id="canvas"></div>
   </div>
@@ -454,9 +455,16 @@
 
   <script>
     // —— Config & State —— 
-    const GRID_COLS = 20, GRID_ROWS = 30, TOTAL = GRID_COLS * GRID_ROWS;
-    let isSelecting = false, isMouseDown = false, isDragging = false;
-    let requiredCount = 1, startCell = null, endCell = null, refreshInterval;
+    const GRID_COLS = 20,
+      GRID_ROWS = 30,
+      TOTAL = GRID_COLS * GRID_ROWS;
+    let isSelecting = false,
+      isMouseDown = false,
+      isDragging = false;
+    let requiredCount = 1,
+      startCell = null,
+      endCell = null,
+      refreshInterval;
     const canvas = document.getElementById('canvas');
     const instructions = document.getElementById('instructions');
     const selBar = document.getElementById('selection-bar');
@@ -473,8 +481,8 @@
     }
 
     // —— Helpers —— 
-    const idxToRC = i => ({ row: Math.floor(i / GRID_COLS), col: i % GRID_COLS });
-    const cellIndex = el => cells.indexOf(el);
+    const idxToRC = (i) => ({ row: Math.floor(i / GRID_COLS), col: i % GRID_COLS });
+    const cellIndex = (el) => cells.indexOf(el);
 
     // — Replace getReserved/localStorage → Supabase holds —
     let activeHolds = new Set();
@@ -504,12 +512,12 @@
       await fetchActiveHolds();
 
       // 2. Clear previous uploads and reset all cells
-      document.querySelectorAll('.canvas-upload').forEach(e => e.remove());
-      cells.forEach(c => c.className = 'canvas-cell');
+      document.querySelectorAll('.canvas-upload').forEach((e) => e.remove());
+      cells.forEach((c) => (c.className = 'canvas-cell'));
 
       // 3. Draw sold uploads (paid=true) as before
       if (!isSelecting) {
-        getUploads().forEach(u => {
+        getUploads().forEach((u) => {
           let container;
           if (u.link) {
             container = document.createElement('a');
@@ -531,9 +539,9 @@
               tooltip.textContent = u.link;
               tooltip.style.display = 'block';
             });
-            container.addEventListener('mousemove', e => {
-              tooltip.style.left = (e.pageX + 10) + 'px';
-              tooltip.style.top = (e.pageY + 10) + 'px';
+            container.addEventListener('mousemove', (e) => {
+              tooltip.style.left = e.pageX + 10 + 'px';
+              tooltip.style.top = e.pageY + 10 + 'px';
             });
             container.addEventListener('mouseleave', () => {
               tooltip.style.display = 'none';
@@ -550,10 +558,9 @@
       // 4. When selecting, combine “activeHolds” + sold uploads to block cells
       if (isSelecting) {
         const used = new Set(activeHolds);
-        getUploads().forEach(u => {
+        getUploads().forEach((u) => {
           for (let r = u.min_r; r <= u.max_r; r++)
-            for (let c = u.min_c; c <= u.max_c; c++)
-              used.add(r * GRID_COLS + c);
+            for (let c = u.min_c; c <= u.max_c; c++) used.add(r * GRID_COLS + c);
         });
         cells.forEach((c, i) => {
           c.classList.add(used.has(i) ? 'reserved' : 'available');
@@ -562,10 +569,9 @@
 
       // 5. Update counters
       const allUsed = new Set(activeHolds);
-      getUploads().forEach(u => {
+      getUploads().forEach((u) => {
         for (let r = u.min_r; r <= u.max_r; r++)
-          for (let c = u.min_c; c <= u.max_c; c++)
-            allUsed.add(r * GRID_COLS + c);
+          for (let c = u.min_c; c <= u.max_c; c++) allUsed.add(r * GRID_COLS + c);
       });
       document.getElementById('sold-count').textContent = allUsed.size;
       document.getElementById('avail-count').textContent = TOTAL - allUsed.size;
@@ -573,32 +579,39 @@
 
     // —— Selection logic —— 
     function clearSelection() {
-      cells.forEach(c => c.classList.remove('selected'));
+      cells.forEach((c) => c.classList.remove('selected'));
     }
     function updateInstructions() {
-      const selCount = cells.filter(c => c.classList.contains('selected')).length;
+      const selCount = cells.filter((c) => c.classList.contains('selected')).length;
       const diff = requiredCount - selCount;
-      if (diff > 0) instructions.textContent = `Select: ${diff} more plot${diff > 1 ? 's' : ''}.`;
-      else if (diff < 0) instructions.textContent = `Remove ${-diff} plot${-diff > 1 ? 's' : ''}.`;
-      else instructions.textContent = `Perfect! ${requiredCount} plot${requiredCount > 1 ? 's' : ''} selected.`;
+      if (diff > 0)
+        instructions.textContent = `Select: ${diff} more plot${diff > 1 ? 's' : ''}.`;
+      else if (diff < 0)
+        instructions.textContent = `Remove ${-diff} plot${-diff > 1 ? 's' : ''}.`;
+      else
+        instructions.textContent = `Perfect! ${requiredCount} plot${requiredCount > 1 ? 's' : ''} selected.`;
     }
     function drawSelection() {
       clearSelection();
       if (!startCell || !endCell) return;
-      const i1 = cellIndex(startCell), i2 = cellIndex(endCell);
-      const { row: r1, col: c1 } = idxToRC(i1), { row: r2, col: c2 } = idxToRC(i2);
-      const minR = Math.min(r1, r2), maxR = Math.max(r1, r2);
-      const minC = Math.min(c1, c2), maxC = Math.max(c1, c2);
+      const i1 = cellIndex(startCell),
+        i2 = cellIndex(endCell);
+      const { row: r1, col: c1 } = idxToRC(i1),
+        { row: r2, col: c2 } = idxToRC(i2);
+      const minR = Math.min(r1, r2),
+        maxR = Math.max(r1, r2);
+      const minC = Math.min(c1, c2),
+        maxC = Math.max(c1, c2);
       for (let r = minR; r <= maxR; r++)
         for (let c = minC; c <= maxC; c++) {
           const cell = cells[r * GRID_COLS + c];
-          if (!cell.classList.contains('reserved'))
-            cell.classList.add('selected');
+          if (!cell.classList.contains('reserved')) cell.classList.add('selected');
         }
       updateInstructions();
     }
     function finalizeSelection() {
-      const ok = cells.filter(c => c.classList.contains('selected')).length === requiredCount;
+      const ok =
+        cells.filter((c) => c.classList.contains('selected')).length === requiredCount;
       confirmBtn.disabled = !ok;
       confirmBtn.classList.toggle('enabled', ok);
       selBar.style.display = 'block';
@@ -610,16 +623,20 @@
       document.getElementById('count-modal').style.display = 'flex';
     };
     document.getElementById('home-btn').onclick = () => {
-      isSelecting = false; isMouseDown = false;
+      isSelecting = false;
+      isMouseDown = false;
       canvas.classList.remove('select-mode');
       instructions.style.display = selBar.style.display = 'none';
-      clearSelection(); renderGrid();
+      clearSelection();
+      renderGrid();
     };
     document.getElementById('clear-grid-btn').onclick = () => {
-      isSelecting = false; isMouseDown = false;
+      isSelecting = false;
+      isMouseDown = false;
       canvas.classList.remove('select-mode');
       instructions.style.display = selBar.style.display = 'none';
-      clearSelection(); renderGrid();
+      clearSelection();
+      renderGrid();
     };
     document.getElementById('start-selection-btn').onclick = () => {
       requiredCount = +document.querySelector('input[name="plot-count"]:checked').value;
@@ -628,7 +645,8 @@
       canvas.classList.add('select-mode');
       instructions.style.display = 'block';
       selBar.style.display = 'none';
-      instructions.textContent = `Select: ${requiredCount} plot${requiredCount > 1 ? 's' : ''}.`;
+      instructions.textContent = `Select: ${requiredCount} plot${requiredCount > 1 ? 's' : ''
+        }.`;
       renderGrid();
     };
 
@@ -650,11 +668,17 @@
       }
 
       // 2. Build a set of occupied indices
-      const occupied = new Set(existingRows.map(rc => rc.plot_row * GRID_COLS + rc.plot_col));
-      const i1 = cellIndex(startCell), i2 = cellIndex(endCell);
-      const { row: r1, col: c1 } = idxToRC(i1), { row: r2, col: c2 } = idxToRC(i2);
-      const minR = Math.min(r1, r2), maxR = Math.max(r1, r2);
-      const minC = Math.min(c1, c2), maxC = Math.max(c1, c2);
+      const occupied = new Set(
+        existingRows.map((rc) => rc.plot_row * GRID_COLS + rc.plot_col)
+      );
+      const i1 = cellIndex(startCell),
+        i2 = cellIndex(endCell);
+      const { row: r1, col: c1 } = idxToRC(i1),
+        { row: r2, col: c2 } = idxToRC(i2);
+      const minR = Math.min(r1, r2),
+        maxR = Math.max(r1, r2);
+      const minC = Math.min(c1, c2),
+        maxC = Math.max(c1, c2);
 
       // 3. Prepare new inserts—and check for conflicts
       const inserts = [];
@@ -664,7 +688,9 @@
           if (occupied.has(idx)) {
             alert('Sorry—some of those plots were just taken. Please re-select.');
             startCell = endCell = null;
-            clearSelection(); finalizeSelection(); renderGrid();
+            clearSelection();
+            finalizeSelection();
+            renderGrid();
             return;
           }
           inserts.push({ plot_row: r, plot_col: c });
@@ -672,7 +698,9 @@
       }
 
       // 4. Insert new holds into Supabase
-      const { error: insertError } = await supabase.from('reservations').insert(inserts);
+      const { error: insertError } = await supabase
+        .from('reservations')
+        .insert(inserts);
       if (insertError) {
         console.error('Error creating holds:', insertError);
         alert('Error reserving plots. Please try again.');
@@ -684,7 +712,7 @@
     };
 
     // —— Drag-to-select (mouse + touch) —— 
-    cells.forEach(cell => {
+    cells.forEach((cell) => {
       // Mouse down handler
       cell.addEventListener('mousedown', () => {
         if (!isSelecting || cell.classList.contains('reserved')) return;
@@ -717,9 +745,15 @@
       if (!isSelecting || !isMouseDown) return;
       evt.preventDefault();
       const touch = evt.touches[0];
-      const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
+      const targetElement = document.elementFromPoint(
+        touch.clientX,
+        touch.clientY
+      );
       if (!targetElement) return;
-      if (targetElement.classList.contains('canvas-cell') && !targetElement.classList.contains('reserved')) {
+      if (
+        targetElement.classList.contains('canvas-cell') &&
+        !targetElement.classList.contains('reserved')
+      ) {
         endCell = targetElement;
         drawSelection();
       }
@@ -771,7 +805,6 @@
       }, 5000);
     });
 
-
     // —— Gallery logic —— 
     const galleryBtn = document.getElementById('gallery-btn');
     const galleryModal = document.getElementById('gallery-modal');
@@ -822,7 +855,9 @@
     }
 
     function navigateGallery(n) {
-      const slides = Array.from(galleryContent.querySelectorAll('.gallery-slide'));
+      const slides = Array.from(
+        galleryContent.querySelectorAll('.gallery-slide')
+      );
       if (!slides.length) return;
       slides[currentSlide].classList.remove('active');
       currentSlide = (n + slides.length) % slides.length;
@@ -830,17 +865,26 @@
     }
 
     galleryBtn.addEventListener('click', showGalleryModal);
-    galleryClose.addEventListener('click', () => galleryModal.setAttribute('aria-hidden', 'true'));
-    galleryPrev.addEventListener('click', () => navigateGallery(currentSlide - 1));
-    galleryNext.addEventListener('click', () => navigateGallery(currentSlide + 1));
-    galleryModal.addEventListener('click', e => {
-      if (e.target === galleryModal) galleryModal.setAttribute('aria-hidden', 'true');
+    galleryClose.addEventListener('click', () =>
+      galleryModal.setAttribute('aria-hidden', 'true')
+    );
+    galleryPrev.addEventListener('click', () =>
+      navigateGallery(currentSlide - 1)
+    );
+    galleryNext.addEventListener('click', () =>
+      navigateGallery(currentSlide + 1)
+    );
+    galleryModal.addEventListener('click', (e) => {
+      if (e.target === galleryModal)
+        galleryModal.setAttribute('aria-hidden', 'true');
     });
-    document.addEventListener('keydown', e => {
+    document.addEventListener('keydown', (e) => {
       if (galleryModal.getAttribute('aria-hidden') === 'false') {
         if (e.key === 'Escape') galleryModal.setAttribute('aria-hidden', 'true');
-        if (e.key === 'ArrowLeft') navigateGallery(currentSlide - 1);
-        if (e.key === 'ArrowRight') navigateGallery(currentSlide + 1);
+        if (e.key === 'ArrowLeft')
+          navigateGallery(currentSlide - 1);
+        if (e.key === 'ArrowRight')
+          navigateGallery(currentSlide + 1);
       }
     });
   </script>
