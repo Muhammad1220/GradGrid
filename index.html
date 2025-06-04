@@ -180,11 +180,15 @@
     .canvas-cell {
       position: relative;
       z-index: 1;
-      /* border: 1px solid var(--white); */
+      border: none;
       background: transparent;
       aspect-ratio: 1;
       min-width: 2rem;
       min-height: 2rem;
+    }
+
+    .canvas-container.select-mode .canvas-cell {
+      border: 1px solid var(--white);
     }
 
     .canvas-cell.reserved {
