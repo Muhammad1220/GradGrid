@@ -81,89 +81,59 @@
 
   <main>
     <h2>Purchase Complete!</h2>
-    <div class="summary" id="summary">
-      <!-- We’ll populate this via JavaScript -->
-    </div>
-    <button id="done-btn">Confirm Payment</button>
+    <!-- NEW BLOCK: Poll Supabase until paid = true, then show “Purchase Complete” -->
+    <p id="summary">Checking payment status… <em>(This may take a second.)</em></p>
+    <button id="done-btn" style="display:none;">Go to Gallery</button>
   </main>
 
-  <!-- 1) Load Supabase JS library (v2 UMD build) -->
+  <!-- Load Supabase JS library (v2 UMD build) so supabase.createClient(...) is defined -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <!-- 2) Initialize Supabase client and handle Confirm Payment -->
+  <!-- Poll Supabase until paid = true, then show “Purchase Complete” -->
   <script>
-    // Replace these with your actual Supabase project URL & anon key:
-    const SUPABASE_URL      = 'https://ljvfdbrxelmqyufxifsg.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqdmZkYnJ4ZWxtcXl1ZnhpZnNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg1NDYwMTcsImV4cCI6MjA2NDEyMjAxN30.vXd5WBBpJgsPeTQRZRcWOzbKJ0uQULyrCPiMlfyKr6A';
-    try {
-      window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      console.log('Final.html: Supabase initialized.');
-    } catch (err) {
-      console.error('Final.html: Failed to initialize Supabase:', err);
-    }
+    (async () => {
+      // 1) Initialize Supabase client (frontend, read-only)
+      const supabaseClient = supabase.createClient(
+        'https://ljvfdbrxelmqyufxifsg.supabase.co',
+        null
+      );
 
-    // 3) Read reservation details from localStorage (for summary display)
-    const res = JSON.parse(localStorage.getItem('gradgrid-reservation') || '{}');
+      // 2) Get uploadId from URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const uploadId = urlParams.get('uploadId');
 
-    // Helper to convert row index to a letter (e.g. 0 → A, 1 → B, etc.)
-    function toLetter(n) {
-      return String.fromCharCode(65 + n);
-    }
-
-    // Build human-readable “Rows A–C, Cols 2–4” style text
-    const rowLabel = (res.minR === res.maxR)
-      ? toLetter(res.minR)
-      : `${toLetter(res.minR)}–${toLetter(res.maxR)}`;
-    const colLabel = (res.minC === res.maxC)
-      ? (res.minC + 1)
-      : `${res.minC + 1}–${res.maxC + 1}`;
-
-    // Populate the summary div
-    document.getElementById('summary').innerHTML = `
-      <p><strong>Plots:</strong> Rows ${rowLabel}, Cols ${colLabel}</p>
-      <p><strong>Area:</strong> ${res.area || 0} plot(s)</p>
-      <p><strong>Card:</strong> •••• •••• •••• 1234</p>
-    `;
-
-    // 4) When “Confirm Payment” is clicked:
-    document.getElementById('done-btn').addEventListener('click', async () => {
-      console.log('Confirm Payment clicked');
-
-      // 4a) Get the uploadId from the URL (final.html?uploadId=43)
-      const params   = new URLSearchParams(window.location.search);
-      const uploadId = params.get('uploadId');
-      console.log('Parsed uploadId =', uploadId);
-      if (!uploadId) {
-        alert('Missing uploadId. Please retry.');
-        return;
-      }
-
-      // 4b) Flip paid = true for that row in Supabase
-      try {
-        console.log('Calling Supabase to update paid flag…');
-        const { data, error: dbErr } = await supabase
+      // 3) Poll Supabase every 2 seconds until uploads.paid === true
+      async function checkPaid() {
+        const { data, error } = await supabaseClient
           .from('uploads')
-          .update({ paid: true })
-          .eq('id', uploadId);
+          .select('paid')
+          .eq('id', uploadId)
+          .single();
 
-        if (dbErr) {
-          console.error('Supabase.update returned error:', dbErr);
-          alert('Could not confirm payment; please try again.');
+        if (error) {
+          console.error('Error checking paid status:', error);
+          document.getElementById('summary').textContent =
+            'Error verifying payment. Please contact support.';
           return;
         }
-        console.log('Supabase.update succeeded:', data);
-      } catch (updateError) {
-        console.error('Exception when calling Supabase.update:', updateError);
-        alert('Could not confirm payment; please try again.');
-        return;
+
+        if (data.paid) {
+          // Once paid = true, show “Purchase Complete”
+          document.getElementById('summary').innerHTML =
+            '<strong>Thank you! Your plot is now live in the gallery.</strong>';
+          const button = document.getElementById('done-btn');
+          button.style.display = 'inline-block';
+          button.textContent = 'Go to Gallery';
+          button.onclick = () => {
+            window.location.href = 'gallery.html';
+          };
+        } else {
+          // Not paid yet—try again in 2 seconds
+          setTimeout(checkPaid, 2000);
+        }
       }
 
-      // 4c) Clear reservation from localStorage and go back home
-      localStorage.removeItem('gradgrid-requiredCount');
-      localStorage.removeItem('gradgrid-reservation');
-      localStorage.removeItem('gradgrid-payment');
-      console.log('Redirecting to index.html');
-      window.location.href = 'index.html';
-    });
+      checkPaid();
+    })();
   </script>
 </body>
 </html>

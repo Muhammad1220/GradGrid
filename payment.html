@@ -129,189 +129,143 @@
         <strong>Total:</strong>
         $<span id="total-display">0.00</span>
       </p>
-      <!-- **NEW: Time Remaining Display** -->
-      <p>
-        <strong>Time Remaining:</strong>
-        <span id="timer-display">20:00</span>
-      </p>
+      <!-- (Removed original 20:00 timer; replaced by the Stripe Checkout + 10-minute timer below) -->
     </div>
 
-    <form id="pay-form">
-      <label>
-        Cardholder Name
-        <input type="text" id="card-name" placeholder="Jane Doe" required>
-      </label>
-      <label>
-        Card Number
-        <input type="text" id="card-number" maxlength="19" placeholder="1234 5678 9012 3456" required>
-      </label>
-      <label>
-        Expiry (MM/YY)
-        <input type="text" id="card-expiry" maxlength="5" placeholder="08/24" required>
-      </label>
-      <label>
-        CVC
-        <input type="text" id="card-cvc" maxlength="3" placeholder="123" required>
-      </label>
-      <button type="submit">Pay Now</button>
-    </form>
+    <!-- NEW BLOCK: Stripe Checkout button + 10-minute timer (replaces old <form>) -->
+    <p>
+      <strong>Time Remaining:</strong>
+      <span id="timer-display">10:00</span>
+    </p>
+    <button id="checkout-btn">Pay Now</button>
+
+    <!-- Load Supabase first so `supabase` is defined -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+    <!-- Then load Stripe.js, then run the Stripe + timer logic -->
+    <script src="https://js.stripe.com/v3"></script>
+    <script>
+      (async () => {
+        // 1) Initialize Supabase client for reads
+        const supabaseClient = supabase.createClient(
+          'https://ljvfdbrxelmqyufxifsg.supabase.co',
+          null
+        );
+
+        // 2) Initialize Stripe with your publishable key
+        const stripe = Stripe("pk_test_51RMzWm2euuVHjVwe4sOT0znfaDHUwRBzcvF0xBNpvT68PlollRNLOW6cTMN5EGiC8O89Ko4q0kA2l9JSDQdIV53900N3AxXjNH");
+
+        // 3) Extract uploadId from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const uploadId = urlParams.get('uploadId');
+        if (!uploadId) {
+          alert('Missing uploadId. Please retry.');
+          window.location.href = 'index.html';
+          return;
+        }
+
+        // 4) Fetch reservation’s reserved_at timestamp
+        const { data: resRow } = await supabaseClient
+          .from('reservations')
+          .select('reserved_at')
+          .eq('upload_id', uploadId)
+          .single();
+
+        if (!resRow) {
+          alert('No reservation found. Please re-select your plot.');
+          window.location.href = 'index.html';
+          return;
+        }
+
+        // 5) Compute the 10-minute payment cutoff
+        const reservedAt = new Date(resRow.reserved_at);
+        const paymentExpires = new Date(reservedAt.getTime() + 10 * 60 * 1000);
+
+        // 6) Start countdown timer (updates ONLY #timer-display)
+        const timerDisplay = document.getElementById('timer-display');
+        const timerInterval = setInterval(() => {
+          const now = new Date();
+          const diff = paymentExpires - now;
+
+          if (diff <= 0) {
+            clearInterval(timerInterval);
+            // Expire the hold in Supabase:
+            supabaseClient
+              .from('reservations')
+              .delete()
+              .eq('upload_id', uploadId);
+            alert('Your 10-minute window has expired. Please re-select your plot.');
+            window.location.href = 'index.html';
+            return;
+          }
+
+          // Update “mm:ss”
+          const minutes = Math.floor(diff / 60000);
+          const seconds = Math.floor((diff % 60000) / 1000);
+          timerDisplay.textContent =
+            `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }, 1000);
+
+        // 7) “Pay Now” click handler
+        document.getElementById('checkout-btn').addEventListener('click', async () => {
+          document.getElementById('checkout-btn').disabled = true;
+
+          // 7a) Recalculate dynamic price
+          const { data: soldRows } = await supabaseClient
+            .from('uploads')
+            .select('min_r, max_r, min_c, max_c')
+            .eq('paid', true);
+
+          let soldCells = 0;
+          soldRows.forEach(r => {
+            soldCells += (r.max_r - r.min_r + 1) * (r.max_c - r.min_c + 1);
+          });
+          const blocksSold = Math.floor(soldCells / 10);
+          const surcharge = blocksSold * 0.5;
+          const basePrice = 2.00; // $2.00/plot
+          const currentPrice = basePrice + surcharge;
+          const amountInCents = Math.round(currentPrice * 100);
+
+          // 7b) Get plot dimensions for quantity
+          const { data: uploadRow } = await supabaseClient
+            .from('uploads')
+            .select('min_r, max_r, min_c, max_c')
+            .eq('id', uploadId)
+            .single();
+
+          const width = uploadRow.max_c - uploadRow.min_c + 1;
+          const height = uploadRow.max_r - uploadRow.min_r + 1;
+          const quantity = width * height;
+
+          // 7c) Call Netlify Function to create a Checkout Session
+          const response = await fetch('/.netlify/functions/create-checkout-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              uploadId,
+              unitAmount: amountInCents,
+              quantity
+            }),
+          });
+
+          const { sessionId } = await response.json();
+          // 7d) Redirect to Stripe Checkout
+          await stripe.redirectToCheckout({ sessionId });
+        });
+
+        // 8) If user returns with ?canceled=true, expire hold immediately
+        if (urlParams.get('canceled') === 'true') {
+          await supabaseClient
+            .from('reservations')
+            .delete()
+            .eq('upload_id', uploadId);
+          window.location.href = 'index.html?paymentCanceled=true';
+        }
+      })();
+    </script>
   </main>
 
-  <!-- 1) Load Supabase JS library BEFORE any code that uses `supabase` -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-
-  <script>
-    (async function initPayment() {
-      console.log('--- payment.html script starting ---');
-
-      // 2) Initialize Supabase client
-      const SUPABASE_URL = 'https://ljvfdbrxelmqyufxifsg.supabase.co';
-      const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqdmZkYnJ4ZWxtcXl1ZnhpZnNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg1NDYwMTcsImV4cCI6MjA2NDEyMjAxN30.vXd5WBBpJgsPeTQRZRcWOzbKJ0uQULyrCPiMlfyKr6A';
-      let supabaseClient;
-      const basePrice = 2.00; // ← your starting price per plot (adjust as needed)
-
-      try {
-        supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-        console.log('Supabase client initialized.');
-
-      } catch (initErr) {
-        console.error('Failed to initialize Supabase client:', initErr);
-        // Prevent form submission if initialization fails
-        document.getElementById('pay-form').addEventListener('submit', e => e.preventDefault());
-        return;
-      }
-
-      // 3) Parse uploadId from URL
-      const params = new URLSearchParams(window.location.search);
-      const uploadId = params.get('uploadId');
-      if (!uploadId) {
-        alert('Missing uploadId. Please retry.');
-        window.location.href = 'index.html';
-        return;
-      }
-
-      // 4) Fetch the uploads row to confirm it exists and isn’t already paid
-      const { data: uploadRow, error: uploadErr } = await supabaseClient
-        .from('uploads')
-        .select('min_r, max_r, min_c, max_c, paid')
-        .eq('id', uploadId)
-        .single();
-      if (uploadErr || !uploadRow) {
-        alert('Unable to find that reservation. Please start over.');
-        window.location.href = 'index.html';
-        return;
-      }
-      if (uploadRow.paid) {
-        // Already paid → go straight to final
-        window.location.href = `final.html?uploadId=${uploadId}`;
-        return;
-      }
-
-      // 5) Verify holds are still valid (unpaid & unexpired) and fetch reserved_at
-      const twentyMinAgo = new Date(Date.now() - 20 * 60 * 1000).toISOString();
-      const { data: resRows, error: resErr } = await supabaseClient
-        .from('reservations')
-        .select('plot_row, reserved_at')
-        .eq('upload_id', uploadId)
-        .eq('paid', false)
-        .gte('reserved_at', twentyMinAgo);
-      const expectedCount = (uploadRow.max_r - uploadRow.min_r + 1) * (uploadRow.max_c - uploadRow.min_c + 1);
-      if (resErr || !resRows || resRows.length !== expectedCount) {
-        alert('Your hold has expired or is invalid. Please start over.');
-        window.location.href = 'index.html';
-        return;
-      }
-
-      // 6) Compute countdown based on the earliest reserved_at
-      const reservedAt = new Date(resRows[0].reserved_at);
-      const expiresAt = new Date(reservedAt.getTime() + 20 * 60 * 1000);
-
-      function updateTimer() {
-        const now = new Date();
-        const diffMs = expiresAt - now;
-        if (diffMs <= 0) {
-          alert('Your hold has expired. Returning to grid.');
-          window.location.href = 'index.html?expired=true';
-          return;
-        }
-        const totalSeconds = Math.floor(diffMs / 1000);
-        const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
-        const seconds = String(totalSeconds % 60).padStart(2, '0');
-        document.getElementById('timer-display').textContent = `${minutes}:${seconds}`;
-      }
-      // Start the timer loop
-      updateTimer();
-      const timerInterval = setInterval(updateTimer, 1000);
-
-      // 7) Compute and render “Plots” count and total using dynamic pricing
-      const count = expectedCount;
-      document.getElementById('count-display').textContent = count;
-      console.log('Selected plots count =', count);
-
-      // Determine how many cells have sold so far (same logic as index.html)
-      // Fetch all paid uploads (min_r, max_r, min_c, max_c) and count cells:
-      const { data: paidUploads } = await supabaseClient
-        .from('uploads')
-        .select('min_r, max_r, min_c, max_c')
-        .eq('paid', true);
-
-      let soldCells = 0;
-      paidUploads.forEach(u => {
-        soldCells += (u.max_r - u.min_r + 1) * (u.max_c - u.min_c + 1);
-      });
-
-      // Calculate blocks of 10 and surcharge
-      const blocksSold = Math.floor(soldCells / 10);
-      const surcharge = blocksSold * 0.5;
-
-      // Final price per plot = basePrice + surcharge
-      const currentPrice = basePrice + surcharge;
-
-      // Now compute total
-      const total = count * currentPrice;
-      document.getElementById('total-display').textContent = total.toFixed(2);
-      console.log('Total charge =', total.toFixed(2));
-
-      // 8) Handle form submission: mark paid=true on upload & reservations, then redirect
-      document.getElementById('pay-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        console.log('Pay Now clicked');
-
-        // 8a) Validate Cardholder Name
-        const cardName = document.getElementById('card-name').value.trim();
-        console.log('Cardholder name entered:', cardName);
-        if (!cardName) {
-          alert('Please enter cardholder name.');
-          return;
-        }
-
-        // 8b) Mark uploads.paid = true
-        const { error: updUploadErr } = await supabaseClient
-          .from('uploads')
-          .update({ paid: true })
-          .eq('id', uploadId);
-        if (updUploadErr) {
-          console.error('Error marking upload as paid:', updUploadErr);
-          alert('Payment succeeded but failed to update database. Contact support.');
-          return;
-        }
-
-        // 8c) Mark reservations.paid = true for this uploadId
-        const { error: updResErr } = await supabaseClient
-          .from('reservations')
-          .update({ paid: true })
-          .eq('upload_id', uploadId);
-        if (updResErr) {
-          console.error('Error marking reservations as paid:', updResErr);
-          alert('Payment succeeded but failed to update reservations. Contact support.');
-          return;
-        }
-
-        // 8d) Redirect to final.html
-        window.location.href = `final.html?uploadId=${uploadId}`;
-      });
-    })();
-  </script>
+  <!-- (Removed obsolete Supabase import; it is now loaded above in the Stripe/timer block) -->
 </body>
 
 </html>
