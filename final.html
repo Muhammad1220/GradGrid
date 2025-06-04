@@ -175,19 +175,6 @@
       window.location.href = 'index.html';
     });
   </script>
-  <script>
-    const BASE_WIDTH = 1200;
-    function applyZoom() {
-      const scale = window.innerWidth / BASE_WIDTH;
-      const finalScale = Math.min(1, scale);
-      document.body.style.transformOrigin = "top left";
-      document.body.style.transform = `scale(${finalScale})`;
-      document.body.style.width = (100 / finalScale) + "vw";
-    }
-    window.addEventListener("resize", applyZoom);
-    window.addEventListener("DOMContentLoaded", applyZoom);
-  </script>
-
 </body>
 
 </html>
