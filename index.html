@@ -153,24 +153,35 @@
       z-index: 9;
     }
 
-    /* Grid Canvas: fits exactly beneath navbar, no overflow */
-    .canvas-container {
-      --size: min(100vw, calc(100vh - var(--nav-height)));
+    /* Background Wrapper: covers entire area beneath navbar */
+    .background-wrapper {
       position: absolute;
       top: var(--nav-height);
       left: 0;
       right: 0;
       bottom: 0;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: url("Background.png") center center / cover no-repeat;
+      background-color: var(--white);
+      z-index: 0;
+    }
+
+    /* Canvas Container: centered square grid over the background */
+    .canvas-container {
+      --size: min(100%, calc(100vh - var(--nav-height)));
       width: var(--size);
       height: var(--size);
-      margin: auto;
       display: grid;
       grid-template-columns: repeat(20, 1fr);
       grid-template-rows: repeat(30, 1fr);
-      background:
-        url("Background.png") center center / cover no-repeat,
-        var(--white);
       touch-action: none;
+      min-width: 2rem;
+      min-height: 2rem;
+      position: relative;
+      z-index: 1;
     }
 
     .canvas-container.select-mode {
@@ -405,8 +416,10 @@
     <button id="confirm-btn">Confirm</button>
   </div>
 
-  <!-- GRID CANVAS -->
-  <div class="canvas-container" id="canvas"></div>
+  <!-- GRID CANVAS (wrapped for centered background) -->
+  <div class="background-wrapper">
+    <div class="canvas-container" id="canvas"></div>
+  </div>
 
   <!-- GALLERY MODAL -->
   <div class="gallery-modal" id="gallery-modal" aria-hidden="true" role="dialog" aria-label="Gallery of Uploads">
