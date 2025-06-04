@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>GradGrid 2025</title>
   <style>
-    /* -- Prevent any scrolling, ensure full-page fit -- */
+    /* Reset & Global Styles */
     html,
     body {
       margin: 0;
@@ -153,7 +153,7 @@
       z-index: 9;
     }
 
-    /* Grid Canvas: fits exactly beneath navbar, no overflow */
+    /* Grid Canvas: fits under navbar */
     .canvas-container {
       --size: min(100vw, calc(100vh - var(--nav-height)));
       position: absolute;
@@ -257,21 +257,21 @@
       opacity: 1;
     }
 
-    /* Gallery Modal */
-    .gallery-modal {
+    /* ---------- Gallery Overlay Styles ---------- */
+    .gallery-container {
       position: fixed;
       top: 0;
       left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.9);
+      right: 0;
+      bottom: 0;
       display: none;
       align-items: center;
       justify-content: center;
+      background: transparent;
       z-index: 30;
     }
 
-    .gallery-modal[aria-hidden="false"] {
+    .gallery-container.active {
       display: flex;
     }
 
@@ -282,9 +282,6 @@
       height: 90%;
       max-height: 90%;
       overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
     }
 
     .gallery-slide {
@@ -314,7 +311,7 @@
       font-size: 1rem;
     }
 
-    /* **NEW** styling for uploader’s name */
+    /* New styling for uploader’s name */
     .gallery-uploader-name {
       font-size: 0.9rem;
       color: #ccc;
@@ -358,6 +355,11 @@
       font-size: 2.5rem;
       transform: none;
     }
+
+    .gallery-arrow:hover,
+    .gallery-close:hover {
+      background: rgba(0, 0, 0, 0.8);
+    }
   </style>
 </head>
 
@@ -374,7 +376,7 @@
     <div class="menu">
       <a id="home-btn" href="index.html">Home</a>
       <a id="buy-plot-btn" href="#">Buy Plot</a>
-      <a id="gallery-btn" href="gallery.html">Gallery of Uploads</a>
+      <a id="gallery-btn" href="#">Gallery of Uploads</a>
       <a id="clear-grid-btn" href="#">Clear Grid</a>
       <a id="faq-btn" href="faq.html">Help / FAQ</a>
     </div>
@@ -406,9 +408,12 @@
   <!-- GRID CANVAS -->
   <div class="canvas-container" id="canvas"></div>
 
-  <!-- GALLERY MODAL -->
-  <div class="gallery-modal" id="gallery-modal" aria-hidden="true" role="dialog" aria-label="Gallery of Uploads">
-    <div class="gallery-content" id="gallery-content"></div>
+  <!-- GALLERY OVERLAY -->
+  <div class="gallery-container" id="gallery-container" aria-hidden="true" role="dialog"
+    aria-label="Gallery of Uploads">
+    <div class="gallery-content" id="gallery-content">
+      <!-- JS will inject uploads here -->
+    </div>
     <div class="gallery-arrow prev" id="gallery-prev" aria-label="Previous slide">&#10094;</div>
     <div class="gallery-arrow next" id="gallery-next" aria-label="Next slide">&#10095;</div>
     <div class="gallery-close" id="gallery-close" aria-label="Close gallery">&times;</div>
@@ -749,7 +754,6 @@
       const { data: uploads, error } = await supabase
         .from('uploads')
         .select('*')
-        .eq('paid', true)
         .order('created_at', { ascending: false });
       if (error) {
         console.error('Error loading uploads:', error);
@@ -765,24 +769,19 @@
       }, 5000);
     });
 
-
     // —— Gallery logic —— 
-    const galleryBtn = document.getElementById('gallery-btn');
-    const galleryModal = document.getElementById('gallery-modal');
-    const galleryContent = document.getElementById('gallery-content');
-    const galleryPrev = document.getElementById('gallery-prev');
-    const galleryNext = document.getElementById('gallery-next');
-    const galleryClose = document.getElementById('gallery-close');
     let currentSlide = 0;
-
     function showGalleryModal() {
-      galleryContent.innerHTML = '';
-      const uploads = getUploads();
+      const galleryContainer = document.getElementById('gallery-container');
+      galleryContainer.classList.add('active');
+      const galleryContentEl = document.getElementById('gallery-content');
+      galleryContentEl.innerHTML = '';
+      const uploads = getUploads().filter(u => u.paid);
       if (uploads.length === 0) {
         const msg = document.createElement('div');
         msg.className = 'gallery-slide active';
         msg.innerHTML = '<div class="gallery-caption">No uploads to display.</div>';
-        galleryContent.appendChild(msg);
+        galleryContentEl.appendChild(msg);
       } else {
         uploads.forEach((u, i) => {
           const slide = document.createElement('div');
@@ -793,14 +792,10 @@
           img.alt = `Upload ${i + 1}`;
           slide.appendChild(img);
 
-          // **NEW**: Show uploader’s name
           if (u.uploader_name) {
             const nameEl = document.createElement('div');
             nameEl.className = 'gallery-uploader-name';
             nameEl.textContent = `By: ${u.uploader_name}`;
-            nameEl.style.fontSize = '0.9rem';
-            nameEl.style.color = '#ccc';
-            nameEl.style.marginBottom = '0.5rem';
             slide.appendChild(nameEl);
           }
 
@@ -808,31 +803,36 @@
           cap.className = 'gallery-caption';
           cap.textContent = `Upload ${i + 1}`;
           slide.appendChild(cap);
-          galleryContent.appendChild(slide);
+          galleryContentEl.appendChild(slide);
         });
       }
       currentSlide = 0;
-      galleryModal.setAttribute('aria-hidden', 'false');
     }
 
     function navigateGallery(n) {
-      const slides = Array.from(galleryContent.querySelectorAll('.gallery-slide'));
+      const slides = Array.from(document.querySelectorAll('.gallery-slide'));
       if (!slides.length) return;
       slides[currentSlide].classList.remove('active');
       currentSlide = (n + slides.length) % slides.length;
       slides[currentSlide].classList.add('active');
     }
 
-    galleryBtn.addEventListener('click', showGalleryModal);
-    galleryClose.addEventListener('click', () => galleryModal.setAttribute('aria-hidden', 'true'));
-    galleryPrev.addEventListener('click', () => navigateGallery(currentSlide - 1));
-    galleryNext.addEventListener('click', () => navigateGallery(currentSlide + 1));
-    galleryModal.addEventListener('click', e => {
-      if (e.target === galleryModal) galleryModal.setAttribute('aria-hidden', 'true');
+    document.getElementById('gallery-btn').addEventListener('click', (e) => {
+      e.preventDefault();
+      showGalleryModal();
+    });
+    document.getElementById('gallery-close').addEventListener('click', () => {
+      document.getElementById('gallery-container').classList.remove('active');
+    });
+    document.getElementById('gallery-prev').addEventListener('click', () => navigateGallery(currentSlide - 1));
+    document.getElementById('gallery-next').addEventListener('click', () => navigateGallery(currentSlide + 1));
+    document.getElementById('gallery-container').addEventListener('click', e => {
+      if (e.target === e.currentTarget) document.getElementById('gallery-container').classList.remove('active');
     });
     document.addEventListener('keydown', e => {
-      if (galleryModal.getAttribute('aria-hidden') === 'false') {
-        if (e.key === 'Escape') galleryModal.setAttribute('aria-hidden', 'true');
+      const galleryContainer = document.getElementById('gallery-container');
+      if (galleryContainer.classList.contains('active')) {
+        if (e.key === 'Escape') galleryContainer.classList.remove('active');
         if (e.key === 'ArrowLeft') navigateGallery(currentSlide - 1);
         if (e.key === 'ArrowRight') navigateGallery(currentSlide + 1);
       }
