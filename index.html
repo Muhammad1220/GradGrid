@@ -560,44 +560,46 @@
       document.querySelectorAll('.canvas-upload').forEach(e => e.remove());
       cells.forEach(c => c.className = 'canvas-cell');
 
-      // 3. Draw sold uploads (paid=true) as before
+      // 3. Draw sold uploads (only those with paid = true)
       if (!isSelecting) {
-        getUploads().forEach(u => {
-          let container;
-          if (u.link) {
-            container = document.createElement('a');
-            container.href = u.link;
-            container.target = '_blank';
-            container.rel = 'noopener noreferrer';
-          } else {
-            container = document.createElement('div');
-          }
-          container.className = 'canvas-upload';
-          container.style.gridRowStart = u.min_r + 1;
-          container.style.gridRowEnd = u.max_r + 2;
-          container.style.gridColumnStart = u.min_c + 1;
-          container.style.gridColumnEnd = u.max_c + 2;
+        getUploads()
+          .filter(u => u.paid)  // ← ensure we only render paid uploads
+          .forEach(u => {
+            let container;
+            if (u.link) {
+              container = document.createElement('a');
+              container.href   = u.link;
+              container.target = '_blank';
+              container.rel    = 'noopener noreferrer';
+            } else {
+              container = document.createElement('div');
+            }
+            container.className = 'canvas-upload';
+            container.style.gridRowStart    = u.min_r + 1;
+            container.style.gridRowEnd      = u.max_r + 2;
+            container.style.gridColumnStart = u.min_c + 1;
+            container.style.gridColumnEnd   = u.max_c + 2;
 
-          // Tooltip handlers for links
-          if (u.link) {
-            container.addEventListener('mouseenter', () => {
-              tooltip.textContent = u.link;
-              tooltip.style.display = 'block';
-            });
-            container.addEventListener('mousemove', e => {
-              tooltip.style.left = (e.pageX + 10) + 'px';
-              tooltip.style.top = (e.pageY + 10) + 'px';
-            });
-            container.addEventListener('mouseleave', () => {
-              tooltip.style.display = 'none';
-            });
-          }
+            // Tooltip handlers for links
+            if (u.link) {
+              container.addEventListener('mouseenter', () => {
+                tooltip.textContent  = u.link;
+                tooltip.style.display = 'block';
+              });
+              container.addEventListener('mousemove', e => {
+                tooltip.style.left = (e.pageX + 10) + 'px';
+                tooltip.style.top  = (e.pageY + 10) + 'px';
+              });
+              container.addEventListener('mouseleave', () => {
+                tooltip.style.display = 'none';
+              });
+            }
 
-          const img = document.createElement('img');
-          img.src = u.url;
-          container.appendChild(img);
-          canvas.appendChild(container);
-        });
+            const img = document.createElement('img');
+            img.src = u.url;
+            container.appendChild(img);
+            canvas.appendChild(container);
+          });
       }
 
       // 4. When selecting, combine “activeHolds” + sold uploads to block cells
@@ -815,17 +817,19 @@
       if (refreshInterval) clearInterval(refreshInterval);
     });
 
-    // —— Init: fetch uploads & auto-refresh —— 
+    // —— Init: fetch **only paid** uploads & auto-refresh —— 
     window.addEventListener('DOMContentLoaded', async () => {
-      // 1. Fetch all uploads from Supabase
+      // 1. Fetch only uploads where paid = true
       const { data: uploads, error } = await supabase
         .from('uploads')
         .select('*')
+        .eq('paid', true)
         .order('created_at', { ascending: false });
+
       if (error) {
         console.error('Error loading uploads:', error);
       } else {
-        // Overwrite localStorage-backed uploads with cloud data
+        // Overwrite localStorage-backed uploads with only paid uploads
         window.cloudUploads = uploads;
       }
 
