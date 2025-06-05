@@ -147,20 +147,18 @@
       /* Exactly the same “gutter width” as .how-to-container */
       width: calc((100vw - min(100vw, calc(100vh - var(--nav-height)))) / 2);
       height: calc(100vh - var(--nav-height));
-
+  
       /* Center content vertically/horizontally */
       display: flex;
       align-items: center;
       justify-content: center;
-
+  
       background: rgba(255, 255, 255, 0.9);
       text-align: center;
       padding: 0.5rem;
       font-weight: bold;
-      display: none;
-      /* toggled on/off via JS */
-      z-index: 11;
-      /* sit above the navbar (which is z-index:10) */
+      display: none;      /* toggled on/off via JS */
+      z-index: 11;        /* sit above the navbar (which is z-index:10) */
     }
 
     /* Grid Canvas: fits under navbar */
