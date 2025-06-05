@@ -139,20 +139,26 @@
       cursor: pointer;
     }
 
-    /* Instruction banner */
+    /* Instruction banner (moved to right‐side gutter, centered vertically) */
     .instructions {
       position: fixed;
-      top: 0;
-      /* Move to very top (overlaps navbar) */
-      left: 0;
+      top: var(--nav-height);
       right: 0;
+      /* Exactly the same “gutter width” as .how-to-container */
+      width: calc((100vw - min(100vw, calc(100vh - var(--nav-height)))) / 2);
+      height: calc(100vh - var(--nav-height));
+  
+      /* Center content vertically/horizontally */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+  
       background: rgba(255, 255, 255, 0.9);
       text-align: center;
       padding: 0.5rem;
       font-weight: bold;
-      display: none;
-      z-index: 11;
-      /* Must be higher than navbar’s z-index (10) */
+      display: none;      /* toggled on/off via JS */
+      z-index: 11;        /* sit above the navbar (which is z-index:10) */
     }
 
     /* Grid Canvas: fits under navbar */
