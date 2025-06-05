@@ -361,6 +361,52 @@
     .gallery-close:hover {
       background: rgba(0, 0, 0, 0.8);
     }
+
+    /* ------------ New “How to Buy & Post” Column Styles ------------ */
+
+    .how-to-container {
+      /* Position to occupy the left blank gutter beside the square grid */
+      position: absolute;
+      top: var(--nav-height);
+      left: 0;
+
+      /* Re‐compute “grid size” inline (instead of var(--size)) */
+      width: calc(
+        (100vw - min(100vw, calc(100vh - var(--nav-height)))) / 2
+      );
+      height: calc(100vh - var(--nav-height));
+
+      display: flex;
+      align-items: center;     /* vertical centering */
+      justify-content: center; /* horizontal centering inside that gutter */
+      pointer-events: none;     /* so clicks pass through to grid if needed */
+    }
+
+    .how-to-content {
+      max-width: 90%;
+      color: var(--navy);
+      background: rgba(255,255,255,0.8);
+      padding: 1rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      pointer-events: auto; /* allow selecting text inside */
+    }
+
+    .how-to-content h3 {
+      margin-top: 0;
+      font-size: 1.25rem;
+      color: var(--navy);
+    }
+
+    .how-to-content ol {
+      margin-left: 1.2rem;
+      line-height: 1.4;
+    }
+
+    .how-to-content li {
+      margin-bottom: 0.8rem;
+    }
+
   </style>
 </head>
 
@@ -404,6 +450,25 @@
   <!-- CONFIRM BAR -->
   <div id="selection-bar">
     <button id="confirm-btn">Confirm</button>
+  </div>
+
+  <!-- HOW TO BUY & POST COLUMN -->
+  <div class="how-to-container">
+    <div class="how-to-content">
+      <h3>How to Buy & Post a Plot</h3>
+      <ol>
+        <li><strong>Click “Buy Plot”</strong><br>
+          Tap the “Buy Plot” button in the navbar to start selecting.</li>
+        <li><strong>Drag (or Tap + Swipe) to Choose Your Square(s)</strong><br>
+          Highlight the exact cell(s) you want. You can pick a single square or drag across multiple to form a rectangle.</li>
+        <li><strong>Upload Your Content</strong><br>
+          After confirming your selection, you’ll be taken to the Upload page. Snap a photo or type a message—whatever you’d like to appear in your plot.</li>
+        <li><strong>Complete Payment Within 10 Minutes</strong><br>
+          You have ten minutes to finish checkout. Click “Pay Now,” enter your card details on Stripe’s secure page, and you’re done!</li>
+        <li><strong>See Your Plot in the Gallery</strong><br>
+          Once payment is confirmed, your plot (and caption) will appear publicly in the gallery.</li>
+      </ol>
+    </div>
   </div>
 
   <!-- GRID CANVAS -->
