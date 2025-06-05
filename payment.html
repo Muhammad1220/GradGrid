@@ -273,44 +273,7 @@
       console.log('Total charge =', total.toFixed(2));
 
       // 8) Handle form submission: mark paid=true on upload & reservations, then redirect
-         document.getElementById('pay-now-btn').addEventListener('click', async () => {
-     console.log('Pay Now clicked');
-
-     // 8a) Validate Cardholder Name
-     const cardName = document.getElementById('card-name').value.trim();
-     console.log('Cardholder name entered:', cardName);
-     if (!cardName) {
-       alert('Please enter cardholder name.');
-       return;
-     }
-
-     // 8b) Mark uploads.paid = true
-     const { error: updUploadErr } = await supabaseClient
-       .from('uploads')
-       .update({ paid: true })
-       .eq('id', uploadId);
-     if (updUploadErr) {
-       console.error('Error marking upload as paid:', updUploadErr);
-       alert('Payment succeeded but failed to update database. Contact support.');
-       return;
-     }
-
-     // 8c) Mark reservations.paid = true for this uploadId
-     const { error: updResErr } = await supabaseClient
-       .from('reservations')
-       .update({ paid: true })
-       .eq('upload_id', uploadId);
-     if (updResErr) {
-       console.error('Error marking reservations as paid:', updResErr);
-       alert('Payment succeeded but failed to update reservations. Contact support.');
-       return;
-     }
-
-     // 8d) Redirect to final.html
-     window.location.href = `final.html?uploadId=${uploadId}`;
-   });
-
-        e.preventDefault();
+      document.getElementById('pay-now-btn').addEventListener('click', async () => {
         console.log('Pay Now clicked');
 
         // 8a) Validate Cardholder Name
