@@ -142,7 +142,8 @@
     /* Instruction banner */
     .instructions {
       position: fixed;
-      top: var(--nav-height);
+      top: 0;
+      /* Move to very top (overlaps navbar) */
       left: 0;
       right: 0;
       background: rgba(255, 255, 255, 0.9);
@@ -150,7 +151,8 @@
       padding: 0.5rem;
       font-weight: bold;
       display: none;
-      z-index: 9;
+      z-index: 11;
+      /* Must be higher than navbar’s z-index (10) */
     }
 
     /* Grid Canvas: fits under navbar */
@@ -568,27 +570,27 @@
             let container;
             if (u.link) {
               container = document.createElement('a');
-              container.href   = u.link;
+              container.href = u.link;
               container.target = '_blank';
-              container.rel    = 'noopener noreferrer';
+              container.rel = 'noopener noreferrer';
             } else {
               container = document.createElement('div');
             }
             container.className = 'canvas-upload';
-            container.style.gridRowStart    = u.min_r + 1;
-            container.style.gridRowEnd      = u.max_r + 2;
+            container.style.gridRowStart = u.min_r + 1;
+            container.style.gridRowEnd = u.max_r + 2;
             container.style.gridColumnStart = u.min_c + 1;
-            container.style.gridColumnEnd   = u.max_c + 2;
+            container.style.gridColumnEnd = u.max_c + 2;
 
             // Tooltip handlers for links
             if (u.link) {
               container.addEventListener('mouseenter', () => {
-                tooltip.textContent  = u.link;
+                tooltip.textContent = u.link;
                 tooltip.style.display = 'block';
               });
               container.addEventListener('mousemove', e => {
                 tooltip.style.left = (e.pageX + 10) + 'px';
-                tooltip.style.top  = (e.pageY + 10) + 'px';
+                tooltip.style.top = (e.pageY + 10) + 'px';
               });
               container.addEventListener('mouseleave', () => {
                 tooltip.style.display = 'none';
